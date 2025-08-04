@@ -1,23 +1,10 @@
+
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { Redirect } from 'expo-router';
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Hello Web</Text>
-    </View>
+    <Redirect href={'/(tabs)'} />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#222',
-  },
-  text: {
-    fontSize: 22,
-    color: '#fff',
-  },
-});
