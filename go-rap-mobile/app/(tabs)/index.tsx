@@ -1,10 +1,12 @@
+import { Link, router } from 'expo-router';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 export default function App() {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Hello Web</Text>
+      {/* <Link href="/login" style={styles.text}><Text>Hello Web</Text></Link> */}
+       
     </View>
   );
 }
