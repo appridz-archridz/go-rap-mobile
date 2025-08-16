@@ -5,11 +5,18 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { WorkSans_400Regular, WorkSans_500Medium, WorkSans_700Bold } from '@expo-google-fonts/work-sans';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+  });
+
+  const [fontsLoaded] = useFonts({
+    "work-sans-regular": WorkSans_400Regular,
+    "work-sans-medium": WorkSans_500Medium,
+    "work-sans-bold": WorkSans_700Bold,
   });
 
   if (!loaded) {
@@ -20,7 +27,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'light' ? DarkTheme : DefaultTheme}>
       <Stack>
-        <Stack.Screen name='welcome' />
+        <Stack.Screen name='welcome' options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
