@@ -142,6 +142,7 @@ const styles = StyleSheet.create({
     color: "#222",
     borderWidth: 0,
     height: 40,
+    outlineWidth: 0,
   },
   seatsContainer: {
     flexDirection: "row",
