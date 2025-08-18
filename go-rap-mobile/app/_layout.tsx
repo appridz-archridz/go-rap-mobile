@@ -5,6 +5,10 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+
+// Install the package with npm or yarn
+// npm install @expo-google-fonts/work-sans
+// yarn add @expo-google-fonts/work-sans
 import { WorkSans_400Regular, WorkSans_500Medium, WorkSans_700Bold } from '@expo-google-fonts/work-sans';
 
 export default function RootLayout() {
@@ -28,6 +32,8 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'light' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name='welcome' options={{ headerShown: false }} />
+        <Stack.Screen name='create-ride' options={{ headerShown: false }} />
+        <Stack.Screen name='my-ride' options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

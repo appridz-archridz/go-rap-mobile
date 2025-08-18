@@ -1,8 +1,6 @@
-import { StyleSheet, Text } from "react-native";
-import { Pressable } from "react-native";
-import { View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-const PressableButton = ({customStyles, text, onPress}) => {
+const PressableButton = ({customStyles={}, text="Button", onPress={}}) => {
     
     const styles = StyleSheet.create({
         button: {
