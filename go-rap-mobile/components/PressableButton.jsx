@@ -1,32 +1,41 @@
-import { StyleSheet, Text } from "react-native";
-import { Pressable } from "react-native";
-import { View } from "react-native";
+import { Image, StyleSheet, Text, TouchableHighlight, View } from "react-native";
 
-const PressableButton = ({customStyles, text, onPress}) => {
+const PressableButton = ({customStyles, text, onPress, rightArrow}) => {
     
     const styles = StyleSheet.create({
         button: {
+            height: 56,
             backgroundColor: customStyles.bgColor || '#2094F3FF',
             paddingVertical: 12,
-            borderRadius: customStyles.borderRadius || 10,
-            ':hover': {
-                backgroundColor: customStyles.hoverColor || '#074A81FF'
-            }
+            borderRadius: customStyles.borderRadius || 10
         },
         text: {
             fontFamily: 'work-sans-bold',
             color: customStyles.color || '#fff',
             fontSize: customStyles.fontSize || 20,
             textAlign: 'center',
+        },
+        center: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            flexDirection: 'row',
+            gap: 5
         }
     })
 
     return (
-        <View>
-            <Pressable style={styles.button} onPress={onPress} >
-                <Text style={styles.text}> {text} </Text>
-            </Pressable>
-        </View>
+        <TouchableHighlight style={styles.button} onPress={onPress}>
+            <View style={styles.center}>
+                <Text style={styles.text}>{text}</Text>
+                {rightArrow && (
+                    <Image
+                        source={require('../assets/images/right-arrow.png')}
+                        style={{ width: 20, height: 20 }}
+                    />
+                )}
+            </View>
+        </TouchableHighlight>
     )
 }
 
