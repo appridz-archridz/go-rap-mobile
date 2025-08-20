@@ -107,6 +107,7 @@ export default function myRide() {
               <View style={styles.address}>{item.pickupLocation}</View>-
               <View style={styles.address}>{item.dropLocation}</View>
             </View>
+            <View style={styles.timecontainer}>
             <View style={styles.iconContainer}>
                   <Ionicons name="calendar" size={22} color="#0D48A0FF" />
                 <Text >{item.date}</Text>
@@ -114,6 +115,7 @@ export default function myRide() {
              <View style={styles.iconContainer}>
                   <Ionicons name="time" size={22} color="#0D48A0FF" />
                 <Text >{item.time}</Text>
+            </View>
             </View>
             <Text>{item.vechicleType}</Text>
             <Text>{item.avalaibleSeats}</Text>
@@ -186,6 +188,14 @@ const styles = StyleSheet.create({
     borderColor: '#EBEBEAFF',
     boxShadow: '0px 0px 1px #171a1f12, 0px 0px 2px #171a1f1F',
   },
+  timecontainer: {
+   borderBottomWidth: 1,
+   borderColor: '#EBEBEAFF',
+   gap:10,
+   paddingTop:10,
+   paddingBottom:10,
+  },
+
   buttoncontainer: {
     flexDirection: "row",
     gap: 10,
