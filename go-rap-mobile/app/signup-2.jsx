@@ -1,70 +1,54 @@
-import { router } from 'expo-router';
-import { Image, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import FilePicker from '../components/FilePicker';
 import PressableButton from '../components/PressableButton';
 
-const SignUp = () => {
+const SignUp2 = () => {
 
   customStyles = {
     bgColor: '#2094F3',
     color: '#fff'
   }
 
-  const navigateToSignUp2 = () => {
-    router.push("/signup-2");
-  }
-
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.topContent}>
-        <Image source={require('../assets/images/dummy-img.png')} style={styles.image} width={100} height={100} />
-        <Text style={styles.heading}>
-          Create Your GoRap Account
-        </Text>
-        <Text style={styles.caption}>
-          Join our community for faster, safer, and smarter rides.
-        </Text>
-      </View>
       <View style={styles.inputFields}>
 
         <View style={styles.container}>
-          <Text style={styles.label}>Full Name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Full Name"
-            placeholderTextColor="gray"
-            />
+          <Text style={styles.label}>Upload Profile Pic</Text>
+          <FilePicker />
         </View>
 
         <View style={styles.container}>
-          <Text style={styles.label}>Email Address</Text>
+          <Text style={styles.label}>Create Password</Text>
           <TextInput
             style={styles.input}
-            placeholder="email.address@example.com"
+            placeholder="Enter a strong password"
             placeholderTextColor="gray"
             />
+            <Text style={styles.bottomText}>Use 8 or more characters</Text>
         </View>
 
         <View style={styles.container}>
-          <Text style={styles.label}>Phone Number</Text>
+          <Text style={styles.label}>Confirm Password</Text>
           <TextInput
             style={styles.input}
-            placeholder="91XXXXXXXX"
+            placeholder="Confirm your password"
             placeholderTextColor="gray"
             />
-            <Text style={styles.bottomText}>10-digit mobile number</Text>
+            <Text style={styles.bottomText}>Use 8 or more characters</Text>
         </View>
       
       </View>
 
       <View>
-        <PressableButton customStyles={customStyles} text="Continue" rightArrow={true} onPress={navigateToSignUp2} />
+        <PressableButton customStyles={customStyles} text="Sign Up Now" />
       </View>
 
     </SafeAreaView>
   );
 };
 
-export default SignUp;
+export default SignUp2;
 
 const styles = StyleSheet.create({
   topContent: {
@@ -93,7 +77,6 @@ const styles = StyleSheet.create({
   image: {
     justifyContent: 'center',
     alignSelf: 'center'
-
   },
   inputFields: {
     flex: 1,
