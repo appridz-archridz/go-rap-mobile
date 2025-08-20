@@ -1,36 +1,41 @@
+import { Picker } from "@react-native-picker/picker";
 import { useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 
 export default function createRide() {
 
-   const now = new Date();
-   const [form, setForm] = useState({
+  const now = new Date();
+  const [form, setForm] = useState({
     pickupLocation: "",
     dropLLocation: "",
     date: now.toISOString().split("T")[0],
     time: now.getHours() + ":" + now.getMinutes(),
     vechicleType: "",
     avalaibleSeats: 0,
+    totalSeats: "",
+    status: ""
   });
 
-  return (  
+  return (
     <ScrollView
       style={styles.container}
-   
     >
-      <Text style={styles.label}>Pickup Location</Text>
-      <View style={styles.inputContainer}>
+      <View>
+        <Text style={styles.label}>Pickup Location</Text>
+        <View style={styles.inputContainer}>
           <Image
-          style={styles.icon}
-          source={require("../assets/images/location.png")}
-        />
-        <input
-          style={styles.input}
-          placeholder="Enter pickup location"
-          value={form.pickupLocation}
-          onChange={(e) => setForm({ ...form, pickupLocation: e.target.value })}
-        />
+            style={styles.icon}
+            source={require("../assets/images/location.png")}
+          />
+          <input
+            style={styles.input}
+            placeholder="Enter pickup location"
+            value={form.pickupLocation}
+            onChange={(e) => setForm({ ...form, pickupLocation: e.target.value })}
+          />
+        </View>
       </View>
+
       <Text style={styles.label}>Drop Location</Text>
       <View style={styles.inputContainer}>
         <Image
@@ -45,7 +50,7 @@ export default function createRide() {
       </View>
       <Text style={styles.label}>Date</Text>
       <View style={styles.inputContainer}>
-         <Image
+        <Image
           style={styles.icon}
           source={require("../assets/images/calendar.png")}
         />
@@ -58,7 +63,7 @@ export default function createRide() {
       </View>
       <Text style={styles.label}>Time</Text>
       <View style={styles.inputContainer}>
-         <Image
+        <Image
           style={styles.icon}
           source={require("../assets/images/clock.png")}
         />
@@ -71,36 +76,68 @@ export default function createRide() {
       </View>
       <Text style={styles.label}>Vechicle Type</Text>
       <View style={styles.inputContainer}>
-         <Image
+        <Image
           style={styles.icon}
           source={require("../assets/images/sportbike.png")}
         />
+        <Picker
+          selectedValue={form.vechicleType}
+          onValueChange={(itemValue, itemIndex) => setForm({ ...form, vechicleType: itemValue })}
+          style={styles.picker}
+        >
+          <Picker.Item label="Car" value="Car" />
+          <Picker.Item label="Bike" value="Bike" />
+          <Picker.Item label="Auto" value="Auto" />
+        </Picker>
+      </View>
+
+      
+      <Text style={styles.label}>Total Seats</Text>
+      <View style={styles.inputContainer}>
+        <Image
+          style={styles.icon}
+          source={require("../assets/images/user.png")}
+        />
         <input
           style={styles.input}
-          placeholder="Enter vechicle type"
-          value={form.vechicleType}
-          onChange={(e) => setForm({ ...form, vechicleType: e.target.value })}
+          placeholder="Enter total seats"
+          value={form.totalSeats}
+          onChange={(e) => setForm({ ...form, totalSeats: e.target.value })}
         />
       </View>
+
       <Text style={styles.label}>Available Seats</Text>
       <View style={styles.seatsContainer}>
         <View style={styles.iconContainer}>
           <Image
-          style={styles.icon}
-          source={require("../assets/images/user.png")}
-        />
-        <Text style={styles.label}>Current:</Text>
+            style={styles.icon}
+            source={require("../assets/images/user.png")}
+          />
+          <Text style={styles.label}>Current:</Text>
         </View>
         <View style={styles.iconContainer}>
-        <View style={styles.seatButton}>
-          <Text style={styles.seatButtonText} onPress={() => form.avalaibleSeats > 0 && setForm({ ...form, avalaibleSeats: form.avalaibleSeats - 1 })}>-</Text>
-        </View>
-        <Text style={styles.seatCount}>{form.avalaibleSeats}</Text>
-        <View style={styles.seatButton}>
-          <Text style={styles.seatButtonText} onPress={() => setForm({ ...form, avalaibleSeats: form.avalaibleSeats + 1 })}>+</Text>
-        </View>
+          <View style={styles.seatButton}>
+            <Text style={styles.seatButtonText} onPress={() => form.avalaibleSeats > 0 && setForm({ ...form, avalaibleSeats: form.avalaibleSeats - 1 })}>-</Text>
+          </View>
+          <Text style={styles.seatCount}>{form.avalaibleSeats}</Text>
+          <View style={styles.seatButton}>
+            <Text style={styles.seatButtonText} onPress={() => setForm({ ...form, avalaibleSeats: form.avalaibleSeats + 1 })}>+</Text>
+          </View>
         </View>
       </View>
+      <Text style={styles.label}>Status</Text>
+      <View style={styles.inputContainer}>
+        <Picker
+          mode="dropdown"
+          style={styles.picker}
+          selectedValue={form.status}
+          onValueChange={(itemValue) => setForm({ ...form, status: itemValue })}
+        >
+          <Picker.Item label="Pending" value="pending" />
+          <Picker.Item label="Completed" value="completed" />
+        </Picker>
+      </View>
+
       <View style={styles.submitButton}>
         <Text style={styles.submitButtonText}>Create Ride</Text>
       </View>
@@ -116,7 +153,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     color: "#888",
-    marginBottom: 6,
     marginTop: 15,
     fontWeight: "600",
   },
@@ -124,31 +160,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "#f9f9f9",
-    
+    borderColor: "#E0E0E0",
+    borderRadius: 12,
+    padding: 12,
+    marginVertical: 8,
+    backgroundColor: "#fff",
   },
   icon: {
-    width: 24,
-    height: 24,
+    width: 22,
+    height: 22,
     marginRight: 10,
+    tintColor: "#0057D9", // optional (blue like your screenshot)
   },
   input: {
     flex: 1,
     fontSize: 16,
-    color: "#222",
+    color: "#000",
     borderWidth: 0,
-    height: 40,
-    outlineWidth: 0,
+    outlineColor: "#fff",
+
   },
   seatsContainer: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 6,
-     borderWidth: 1,
+    borderWidth: 1,
     borderColor: "#ddd",
     justifyContent: "space-between",
     padding: 12,
@@ -193,5 +229,13 @@ const styles = StyleSheet.create({
   iconContainer: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  picker: {
+    width: "100%",
+    backgroundColor: "#fff",
+    fontSize: 16,
+    color: "#000",
+    borderWidth: 0,
+    outlineColor: "#fff",
   },
 });
