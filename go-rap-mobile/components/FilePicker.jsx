@@ -1,21 +1,31 @@
 import * as DocumentPicker from "expo-document-picker";
+import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { uploadMedia } from "./services/cloudinary";
 
 const FilePicker = () => {
-    // const [selectedFile, setSelectedFile] = useState(null);
+    const [selectedFile, setSelectedFile] = useState(null);
 
     const pickDocument = async () => {
+        console.log("pickDocument");
+        
         const result = await DocumentPicker.getDocumentAsync({
-            type: "*/*",
+            type: ["image/jpg", "image/png", "image/jpeg"],
         });
-        if (result.type === "success") {
+        console.log("result", result.assets[0].uri);
+        if (result.assets[0].uri) {
+            console.log("result.assets[0].uri", result.assets[0].uri);
+            
+            const url = await uploadMedia(result.assets[0].uri, result.assets[0].type);
+            console.log("url", url);
+            
             setSelectedFile(result);
         }
     };
 
     return (
         <View>
-            <TouchableOpacity style={styles.input}>
+            <TouchableOpacity style={styles.input} onPress={pickDocument}>
                 <Text style={styles.placeholder}>
                     Tap to upload media
                 </Text>
