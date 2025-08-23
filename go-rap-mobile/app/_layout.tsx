@@ -3,8 +3,9 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
-
+import store from '../redux/store';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { Provider } from 'react-redux';
 import { WorkSans_400Regular, WorkSans_500Medium, WorkSans_700Bold } from '@expo-google-fonts/work-sans';
 
 export default function RootLayout() {
@@ -25,11 +26,13 @@ export default function RootLayout() {
   }
 
   return (
+    <Provider store={store}>
     <ThemeProvider value={colorScheme === 'light' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name='welcome' options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
+    </Provider>
   );
 }

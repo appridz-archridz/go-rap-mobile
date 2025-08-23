@@ -1,8 +1,16 @@
 import { router } from 'expo-router';
 import { Image, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
 import PressableButton from '../components/PressableButton';
+import { useEffect } from 'react';
+import { useSelector } from 'react-redux';
 
 const SignUp = () => {
+  
+  const selector = useSelector((state) => state);
+  
+  useEffect(() => {
+    console.log(selector.auth);
+  }, [selector]);
 
   customStyles = {
     bgColor: '#2094F3',

@@ -3,10 +3,23 @@ import { Image, Pressable } from "react-native";
 import { StyleSheet, Text, View } from "react-native";
 import PressableButton from "../components/PressableButton";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useDispatch } from "react-redux";
+import { login } from "../redux/authSlice";
 
 const Welcome = () => {
 
+    const dispatch = useDispatch();
+
     const GetStartedOnPress = () => {
+        const payload = {
+            token: "abc123xyz",
+            userDetails: {
+                username: "ranadeep",
+                email: "ranadeep@example.com",
+                phone: "9121923255",
+            },
+        };
+        dispatch(login(payload));
         router.push("/signup");
     }
 
