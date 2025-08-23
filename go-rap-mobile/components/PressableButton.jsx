@@ -1,13 +1,13 @@
 import { Image, StyleSheet, Text, TouchableHighlight, View } from "react-native";
 
-const PressableButton = ({customStyles, text, onPress, rightArrow}) => {
-    
+const PressableButton = ({customStyles, text, onPress, rightArrow = false}) => {
     const styles = StyleSheet.create({
         button: {
-            height: 56,
+            height: customStyles.height || 56,
             backgroundColor: customStyles.bgColor || '#2094F3FF',
             paddingVertical: 12,
-            borderRadius: customStyles.borderRadius || 10
+            borderRadius: customStyles.borderRadius || 10,
+            padding:10
         },
         text: {
             fontFamily: 'work-sans-bold',
