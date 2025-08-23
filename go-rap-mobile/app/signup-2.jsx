@@ -15,7 +15,7 @@ const SignUp2 = () => {
 
         <View style={styles.container}>
           <Text style={styles.label}>Upload Profile Pic</Text>
-          <FilePicker />
+          <FilePicker  />
         </View>
 
         <View style={styles.container}>

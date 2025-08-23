@@ -4,7 +4,6 @@ const FOLDER_NAME = "user-profile-pics"
 const CLOUDINARY_BASE_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}`;
 
 export const uploadMedia = async (uri, type = "image/jpeg") => {
-  console.log("Begin Uploading Media", uri, type);
 
   const data = new FormData();
   data.append("file", {
@@ -25,10 +24,8 @@ export const uploadMedia = async (uri, type = "image/jpeg") => {
     });
 
     const json = await res.json();
-    console.log("Cloudinary response:", json);
     return json;
   } catch (err) {
-    console.log("Error uploading media:", err);
     return { error: err.message };
   }
 };
