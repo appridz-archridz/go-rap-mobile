@@ -30,6 +30,8 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'light' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name='welcome' options={{ headerShown: false }} />
+        <Stack.Screen name='signup' options={{ headerShown: true, headerTitleAlign: 'center', headerTitle: 'Sign Up', }} />
+        <Stack.Screen name='signup-2' options={{ headerShown: true, headerTitle: 'Sign Up', headerTitleAlign: 'center' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Image, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import PressableButton from '../components/PressableButton';
 import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
@@ -23,51 +23,58 @@ const SignUp = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.topContent}>
-        <Image source={require('../assets/images/dummy-img.png')} style={styles.image} width={100} height={100} />
-        <Text style={styles.heading}>
-          Create Your GoRap Account
-        </Text>
-        <Text style={styles.caption}>
-          Join our community for faster, safer, and smarter rides.
-        </Text>
-      </View>
-      <View style={styles.inputFields}>
-
-        <View style={styles.container}>
-          <Text style={styles.label}>Full Name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Full Name"
-            placeholderTextColor="gray"
-            />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"} 
+        keyboardVerticalOffset={90}
+      >
+      <ScrollView>
+        <View style={styles.topContent}>
+          <Image source={require('../assets/images/dummy-img.png')} style={styles.image} width={100} height={100} />
+          <Text style={styles.heading}>
+            Create Your GoRap Account
+          </Text>
+          <Text style={styles.caption}>
+            Join our community for faster, safer, and smarter rides.
+          </Text>
         </View>
+        <View style={styles.inputFields}>
 
-        <View style={styles.container}>
-          <Text style={styles.label}>Email Address</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="email.address@example.com"
-            placeholderTextColor="gray"
+          <View style={styles.container}>
+            <Text style={styles.label}>Full Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Full Name"
+              placeholderTextColor="gray"
             />
-        </View>
+          </View>
 
-        <View style={styles.container}>
-          <Text style={styles.label}>Phone Number</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="91XXXXXXXX"
-            placeholderTextColor="gray"
+          <View style={styles.container}>
+            <Text style={styles.label}>Email Address</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="email.address@example.com"
+              placeholderTextColor="gray"
+            />
+          </View>
+
+          <View style={styles.container}>
+            <Text style={styles.label}>Phone Number</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="91XXXXXXXX"
+              placeholderTextColor="gray"
             />
             <Text style={styles.bottomText}>10-digit mobile number</Text>
+          </View>
+
         </View>
-      
-      </View>
 
-      <View>
-        <PressableButton customStyles={customStyles} text="Continue" rightArrow={true} onPress={navigateToSignUp2} />
-      </View>
-
+        <View>
+          <PressableButton customStyles={customStyles} text="Continue" rightArrow={true} onPress={navigateToSignUp2} />
+        </View>
+      </ScrollView>
+  </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -124,7 +131,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   bottomText: {
-    color: 'gray', 
+    color: 'gray',
     fontSize: 12,
+    paddingBottom: 36,
+  },
+  button: {
+    marginTop: 32,
   }
 });
