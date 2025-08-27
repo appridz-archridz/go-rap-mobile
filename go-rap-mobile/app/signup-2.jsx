@@ -1,4 +1,4 @@
-import { SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import FilePicker from '../components/FilePicker';
 import PressableButton from '../components/PressableButton';
 
@@ -11,39 +11,44 @@ const SignUp2 = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.inputFields}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"} 
+        keyboardVerticalOffset={90}
+      >
+        <ScrollView>
+        <View style={styles.inputFields}>
 
-        <View style={styles.container}>
-          <Text style={styles.label}>Upload Profile Pic</Text>
-          <FilePicker  />
-        </View>
+          <View style={styles.container}>
+            <Text style={styles.label}>Upload Profile Pic</Text>
+            <FilePicker />
+          </View>
 
-        <View style={styles.container}>
-          <Text style={styles.label}>Create Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter a strong password"
-            placeholderTextColor="gray"
+          <View style={styles.container}>
+            <Text style={styles.label}>Create Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter a strong password"
+              placeholderTextColor="gray"
             />
             <Text style={styles.bottomText}>Use 8 or more characters</Text>
-        </View>
+          </View>
 
-        <View style={styles.container}>
-          <Text style={styles.label}>Confirm Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm your password"
-            placeholderTextColor="gray"
+          <View style={styles.container}>
+            <Text style={styles.label}>Confirm Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm your password"
+              placeholderTextColor="gray"
             />
             <Text style={styles.bottomText}>Use 8 or more characters</Text>
+          </View>
         </View>
-      
-      </View>
-
-      <View>
-        <PressableButton customStyles={customStyles} text="Sign Up Now" />
-      </View>
-
+        <View style={styles.button}>
+          <PressableButton customStyles={customStyles} text="Sign Up Now" />
+        </View>
+        </ScrollView>
+        </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -99,7 +104,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   bottomText: {
-    color: 'gray', 
+    color: 'gray',
     fontSize: 12,
+  },
+  button: {
+    marginTop: 32
   }
 });
