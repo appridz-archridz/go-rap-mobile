@@ -1,12 +1,21 @@
 import { router } from 'expo-router';
 import { Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import PressableButton from '../components/PressableButton';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 
 const SignUp = () => {
   
   const selector = useSelector((state) => state);
+  const [detailsForm, setDetailsForm] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+  });
+
+  const handleChange = (name, value) => {
+    setDetailsForm({...detailsForm, [name]: value})
+  }
   
   useEffect(() => {
     console.log(selector.auth);
@@ -17,8 +26,40 @@ const SignUp = () => {
     color: '#fff'
   }
 
+  const [errors, setErrors] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+  });
+
+  const validate = () => {
+    const newErrors = {
+      fullName: '',
+      email: '',
+      phone: '',
+    };
+
+    if (!detailsForm.fullName) {
+      newErrors.fullName = 'Full Name is required';
+    }
+
+    if (!detailsForm.email) {
+      newErrors.email = 'Email Address is required';
+    }
+
+    if (!detailsForm.phone) {
+      newErrors.phone = 'Phone Number is required';
+    }
+
+    setErrors(newErrors);
+
+    return Object.values(newErrors).every((error) => !error);
+  };
+
   const navigateToSignUp2 = () => {
-    router.push("/signup-2");
+    if (validate()) {
+      router.push("/signup-2");
+    }
   }
 
   return (
@@ -46,7 +87,11 @@ const SignUp = () => {
               style={styles.input}
               placeholder="Full Name"
               placeholderTextColor="gray"
+              value={detailsForm.fullName}
+              name="fullName"
+              onChange={(e) => handleChange('fullName', e.target.value)}
             />
+            {errors.fullName && <Text style={{ color: 'red' }}>{errors.fullName}</Text>}
           </View>
 
           <View style={styles.container}>
@@ -55,7 +100,11 @@ const SignUp = () => {
               style={styles.input}
               placeholder="email.address@example.com"
               placeholderTextColor="gray"
+              value={detailsForm.email}
+              name="email"
+              onChange={(e) => handleChange('email', e.target.value)}
             />
+            {errors.email && <Text style={{ color: 'red' }}>{errors.email}</Text>}
           </View>
 
           <View style={styles.container}>
@@ -64,7 +113,11 @@ const SignUp = () => {
               style={styles.input}
               placeholder="91XXXXXXXX"
               placeholderTextColor="gray"
+              value={detailsForm.phone}
+              name="phone"
+              onChange={(e) => handleChange('phone', e.target.value)}
             />
+            {errors.phone && <Text style={{ color: 'red' }}>{errors.phone}</Text>}
             <Text style={styles.bottomText}>10-digit mobile number</Text>
           </View>
 
@@ -139,3 +192,4 @@ const styles = StyleSheet.create({
     marginTop: 32,
   }
 });
+
