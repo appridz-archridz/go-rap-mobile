@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
-import { Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import PressableButton from '../components/PressableButton';
 import { useEffect, useState } from 'react';
+import { Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSelector } from 'react-redux';
+import PressableButton from '../components/PressableButton';
+import { inputField } from '../global-css';
 
 const SignUp = () => {
-  
+
   const selector = useSelector((state) => state);
   const [detailsForm, setDetailsForm] = useState({
     fullName: '',
@@ -14,9 +15,9 @@ const SignUp = () => {
   });
 
   const handleChange = (name, value) => {
-    setDetailsForm({...detailsForm, [name]: value})
+    setDetailsForm({ ...detailsForm, [name]: value })
   }
-  
+
   useEffect(() => {
     console.log(selector.auth);
   }, [selector]);
@@ -57,82 +58,83 @@ const SignUp = () => {
   };
 
   const navigateToSignUp2 = () => {
-    if (validate()) {
-      router.push("/signup-2");
-    }
+    // if (validate()) {
+    router.push("/signup-2");
+    // }
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"} 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={90}
       >
-      <ScrollView>
-        <View style={styles.topContent}>
-          <Image source={require('../assets/images/dummy-img.png')} style={styles.image} width={100} height={100} />
-          <Text style={styles.heading}>
-            Create Your GoRap Account
-          </Text>
-          <Text style={styles.caption}>
-            Join our community for faster, safer, and smarter rides.
-          </Text>
-        </View>
-        <View style={styles.inputFields}>
+        <ScrollView>
+          <View style={styles.topContent}>
+            <Image source={require('../assets/images/dummy-img.png')} style={styles.image} width={100} height={100} />
+            <Text style={styles.heading}>
+              Create Your GoRap Account
+            </Text>
+            <Text style={styles.caption}>
+              Join our community for faster, safer, and smarter rides.
+            </Text>
+          </View>
+          <View style={styles.inputFields}>
 
-          <View style={styles.container}>
-            <Text style={styles.label}>Full Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Full Name"
-              placeholderTextColor="gray"
-              value={detailsForm.fullName}
-              name="fullName"
-              onChange={(e) => handleChange('fullName', e.target.value)}
-            />
-            {errors.fullName && <Text style={{ color: 'red' }}>{errors.fullName}</Text>}
+            <View style={styles.container}>
+              <Text style={styles.label}>Full Name</Text>
+              <TextInput
+                style={inputField}
+                placeholder="Full Name"
+                placeholderTextColor="gray"
+                value={detailsForm.fullName}
+                name="fullName"
+                onChange={(e) => handleChange('fullName', e.target.value)}
+              />
+              {errors.fullName && <Text style={{ color: 'red' }}>{errors.fullName}</Text>}
+            </View>
+
+            <View style={styles.container}>
+              <Text style={styles.label}>Email Address</Text>
+              <TextInput
+                style={inputField}
+                placeholder="email.address@example.com"
+                placeholderTextColor="gray"
+                value={detailsForm.email}
+                name="email"
+                onChange={(e) => handleChange('email', e.target.value)}
+              />
+              {errors.email && <Text style={{ color: 'red' }}>{errors.email}</Text>}
+            </View>
+
+            <View style={styles.container}>
+              <Text style={styles.label}>Phone Number</Text>
+              <TextInput
+                style={inputField}
+                placeholder="91XXXXXXXX"
+                placeholderTextColor="gray"
+                value={detailsForm.phone}
+                name="phone"
+                onChange={(e) => handleChange('phone', e.target.value)}
+              />
+              {errors.phone && <Text style={{ color: 'red' }}>{errors.phone}</Text>}
+              <Text style={styles.bottomText}>10-digit mobile number</Text>
+            </View>
+
           </View>
 
-          <View style={styles.container}>
-            <Text style={styles.label}>Email Address</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="email.address@example.com"
-              placeholderTextColor="gray"
-              value={detailsForm.email}
-              name="email"
-              onChange={(e) => handleChange('email', e.target.value)}
-            />
-            {errors.email && <Text style={{ color: 'red' }}>{errors.email}</Text>}
+          <View>
+            <PressableButton customStyles={customStyles} text="Continue" rightArrow={true} onPress={navigateToSignUp2} />
           </View>
-
-          <View style={styles.container}>
-            <Text style={styles.label}>Phone Number</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="91XXXXXXXX"
-              placeholderTextColor="gray"
-              value={detailsForm.phone}
-              name="phone"
-              onChange={(e) => handleChange('phone', e.target.value)}
-            />
-            {errors.phone && <Text style={{ color: 'red' }}>{errors.phone}</Text>}
-            <Text style={styles.bottomText}>10-digit mobile number</Text>
-          </View>
-
-        </View>
-
-        <View>
-          <PressableButton customStyles={customStyles} text="Continue" rightArrow={true} onPress={navigateToSignUp2} />
-        </View>
-      </ScrollView>
-  </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 export default SignUp;
+
 
 const styles = StyleSheet.create({
   topContent: {
@@ -158,6 +160,16 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 50,
   },
+  field: {
+    width: '100%',
+    borderBottomColor: '#ECEBF0',
+    borderWidth: 1,
+    borderRadius: 8,
+    height: 48,
+    fontSize: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
   image: {
     justifyContent: 'center',
     alignSelf: 'center'
@@ -172,16 +184,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 8,
     fontFamily: 'work-sans-medium',
-  },
-  input: {
-    width: '100%',
-    borderBottomColor: '#ECEBF0',
-    borderWidth: 1,
-    borderRadius: 8,
-    height: 48,
-    fontSize: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
   },
   bottomText: {
     color: 'gray',

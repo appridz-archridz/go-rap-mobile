@@ -1,6 +1,6 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -54,10 +54,11 @@ const SignUp2 = () => {
   };
 
   const handleSubmit = () => {
-    if (validateForm()) {
+    // if (validateForm()) {
       // 🚀 Submit form (API call, etc.)
-      Alert.alert('Success', 'Account created successfully!');
-    }
+      // Alert.alert('Success', 'Account created successfully!');
+      router.push('/login');
+    // }
   };
 
   return (
