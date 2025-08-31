@@ -1,12 +1,12 @@
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { WorkSans_400Regular, WorkSans_500Medium, WorkSans_700Bold } from '@expo-google-fonts/work-sans';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
-import store from '../redux/store';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { Provider } from 'react-redux';
-import { WorkSans_400Regular, WorkSans_500Medium, WorkSans_700Bold } from '@expo-google-fonts/work-sans';
+import store from '../redux/store';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -32,9 +32,12 @@ export default function RootLayout() {
         <Stack.Screen name='welcome' options={{ headerShown: false }} />
         <Stack.Screen name='signup' options={{ headerShown: true, headerTitleAlign: 'center', headerTitle: 'Sign Up', }} />
         <Stack.Screen name='signup-2' options={{ headerShown: true, headerTitle: 'Sign Up', headerTitleAlign: 'center' }} />
+        <Stack.Screen name='create-ride' options={{ headerShown: true, headerTitle: 'Create Ride', headerTitleAlign: 'center' }} />
+
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
     </Provider>
   );
 }
+
