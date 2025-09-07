@@ -1,67 +1,103 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useSelector } from 'react-redux';
-import PressableButton from '../components/PressableButton';
-import { inputField } from '../global-css';
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { useSelector } from "react-redux";
+import PressableButton from "../components/PressableButton";
+import { inputField } from "../global-css";
 
 const SignUp = () => {
-
   const selector = useSelector((state) => state);
+
+  const [lastChangedField, setLastChangedField] = useState(null);
   const [detailsForm, setDetailsForm] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
+    fullName: "",
+    email: "",
+    phone: "",
+  });
+
+  const [errors, setErrors] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
   });
 
   const handleChange = (name, value) => {
-    setDetailsForm({ ...detailsForm, [name]: value })
-  }
+    setDetailsForm({ ...detailsForm, [name]: value });
+    setLastChangedField(name);
+  };
+
+  useEffect(() => {
+    if (lastChangedField) {
+      validate(lastChangedField);
+    }
+  }, [detailsForm, lastChangedField]);
 
   useEffect(() => {
     console.log(selector.auth);
   }, [selector]);
 
-  customStyles = {
-    bgColor: '#2094F3',
-    color: '#fff'
-  }
+  const validate = (field) => {
+    let newErrors = { ...errors };
 
-  const [errors, setErrors] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-  });
-
-  const validate = () => {
-    const newErrors = {
-      fullName: '',
-      email: '',
-      phone: '',
-    };
-
-    if (!detailsForm.fullName) {
-      newErrors.fullName = 'Full Name is required';
+    if (!field || field === "fullName") {
+      if (!detailsForm.fullName.trim()) {
+        newErrors.fullName = "Full Name is required";
+      } else {
+        newErrors.fullName = "";
+      }
     }
 
-    if (!detailsForm.email) {
-      newErrors.email = 'Email Address is required';
+    if (!field || field === "email") {
+      if (!detailsForm.email.trim()) {
+        newErrors.email = "Email Address is required";
+      } else if (
+        !/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(detailsForm.email.trim())
+      ) {
+        newErrors.email = "Please enter a valid Email Address";
+      } else {
+        newErrors.email = "";
+      }
     }
 
-    if (!detailsForm.phone) {
-      newErrors.phone = 'Phone Number is required';
+    if (!field || field === "phone") {
+      if (!detailsForm.phone.trim()) {
+        newErrors.phone = "Phone Number is required";
+      } else if (!/^\d+$/.test(detailsForm.phone.trim())) {
+        newErrors.phone = "Phone Number must contain only digits";
+      } else if (detailsForm.phone.trim().length !== 10) {
+        newErrors.phone = "Phone Number must be exactly 10 digits";
+      } else {
+        newErrors.phone = "";
+      }
     }
 
     setErrors(newErrors);
 
-    return Object.values(newErrors).every((error) => !error);
+    if (!field) {
+      return Object.values(newErrors).every((err) => !err);
+    }
   };
 
   const navigateToSignUp2 = () => {
     // if (validate()) {
-    router.push("/signup-2");
+      router.push("/signup-2", { detailsForm });
     // }
-  }
+  };
+
+  const customStyles = {
+    bgColor: "#2094F3",
+    color: "#fff",
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -71,17 +107,22 @@ const SignUp = () => {
         keyboardVerticalOffset={90}
       >
         <ScrollView>
+          {/* Top Section */}
           <View style={styles.topContent}>
-            <Image source={require('../assets/images/dummy-img.png')} style={styles.image} width={100} height={100} />
-            <Text style={styles.heading}>
-              Create Your GoRap Account
-            </Text>
+            <Image
+              source={require("../assets/images/dummy-img.png")}
+              style={styles.image}
+              width={100}
+              height={100}
+            />
+            <Text style={styles.heading}>Create Your GoRap Account</Text>
             <Text style={styles.caption}>
               Join our community for faster, safer, and smarter rides.
             </Text>
           </View>
-          <View style={styles.inputFields}>
 
+          {/* Input Fields */}
+          <View style={styles.inputFields}>
             <View style={styles.container}>
               <Text style={styles.label}>Full Name</Text>
               <TextInput
@@ -89,10 +130,11 @@ const SignUp = () => {
                 placeholder="Full Name"
                 placeholderTextColor="gray"
                 value={detailsForm.fullName}
-                name="fullName"
-                onChange={(e) => handleChange('fullName', e.target.value)}
+                onChangeText={(text) => handleChange("fullName", text)}
               />
-              {errors.fullName && <Text style={{ color: 'red' }}>{errors.fullName}</Text>}
+              {errors.fullName ? (
+                <Text style={styles.errorText}>{errors.fullName}</Text>
+              ) : null}
             </View>
 
             <View style={styles.container}>
@@ -102,10 +144,11 @@ const SignUp = () => {
                 placeholder="email.address@example.com"
                 placeholderTextColor="gray"
                 value={detailsForm.email}
-                name="email"
-                onChange={(e) => handleChange('email', e.target.value)}
+                onChangeText={(text) => handleChange("email", text)}
               />
-              {errors.email && <Text style={{ color: 'red' }}>{errors.email}</Text>}
+              {errors.email ? (
+                <Text style={styles.errorText}>{errors.email}</Text>
+              ) : null}
             </View>
 
             <View style={styles.container}>
@@ -115,17 +158,24 @@ const SignUp = () => {
                 placeholder="91XXXXXXXX"
                 placeholderTextColor="gray"
                 value={detailsForm.phone}
-                name="phone"
-                onChange={(e) => handleChange('phone', e.target.value)}
+                keyboardType="phone-pad"
+                onChangeText={(text) => handleChange("phone", text)}
               />
-              {errors.phone && <Text style={{ color: 'red' }}>{errors.phone}</Text>}
+              {errors.phone ? (
+                <Text style={styles.errorText}>{errors.phone}</Text>
+              ) : null}
               <Text style={styles.bottomText}>10-digit mobile number</Text>
             </View>
-
           </View>
 
+          {/* Continue Button */}
           <View>
-            <PressableButton customStyles={customStyles} text="Continue" rightArrow={true} onPress={navigateToSignUp2} />
+            <PressableButton
+              customStyles={customStyles}
+              text="Continue"
+              rightArrow={true}
+              onPress={navigateToSignUp2}
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -135,63 +185,54 @@ const SignUp = () => {
 
 export default SignUp;
 
-
 const styles = StyleSheet.create({
   topContent: {
     marginBottom: 32,
   },
   heading: {
-    color: 'black',
+    color: "black",
     fontSize: 24,
     marginBottom: 8,
-    fontFamily: 'work-sans-bold',
-    textAlign: 'center',
+    fontFamily: "work-sans-bold",
+    textAlign: "center",
   },
   caption: {
-    color: 'gray',
+    color: "gray",
     fontSize: 16,
     marginBottom: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
   safeArea: {
     flex: 1,
-    backgroundColor: 'white',
-    // marginTop: 50,
+    backgroundColor: "white",
     padding: 20,
     paddingBottom: 50,
   },
-  field: {
-    width: '100%',
-    borderBottomColor: '#ECEBF0',
-    borderWidth: 1,
-    borderRadius: 8,
-    height: 48,
-    fontSize: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
   image: {
-    justifyContent: 'center',
-    alignSelf: 'center'
-
+    justifyContent: "center",
+    alignSelf: "center",
   },
   inputFields: {
     flex: 1,
     gap: 16,
   },
+  container: {
+    marginBottom: 8,
+  },
   label: {
-    color: 'black',
+    color: "black",
     fontSize: 16,
     marginBottom: 8,
-    fontFamily: 'work-sans-medium',
+    fontFamily: "work-sans-medium",
+  },
+  errorText: {
+    color: "red",
+    fontSize: 14,
+    marginTop: 4,
   },
   bottomText: {
-    color: 'gray',
+    color: "gray",
     fontSize: 12,
     paddingBottom: 36,
   },
-  button: {
-    marginTop: 32,
-  }
 });
-
