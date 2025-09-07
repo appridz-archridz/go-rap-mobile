@@ -40,7 +40,7 @@ const SignUp = () => {
     if (lastChangedField) {
       validate(lastChangedField);
     }
-  }, [detailsForm, lastChangedField]); // ✅ no setLastChangedField here
+  }, [detailsForm, lastChangedField]);
 
   useEffect(() => {
     console.log(selector.auth);
@@ -84,15 +84,14 @@ const SignUp = () => {
     setErrors(newErrors);
 
     if (!field) {
-      // ✅ Return true only if all fields are valid
       return Object.values(newErrors).every((err) => !err);
     }
   };
 
   const navigateToSignUp2 = () => {
-    if (validate()) {
-      router.push("/signup-2");
-    }
+    // if (validate()) {
+      router.push("/signup-2", { detailsForm });
+    // }
   };
 
   const customStyles = {

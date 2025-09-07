@@ -6,7 +6,8 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { Provider } from 'react-redux';
-import store from '../redux/store';
+import { PersistGate } from 'redux-persist/integration/react';
+import { persistor, store } from '../redux/store';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -20,24 +21,25 @@ export default function RootLayout() {
     "work-sans-bold": WorkSans_700Bold,
   });
 
-  if (!loaded) {
-    // Async font loading only occurs in development.
-    return null;
-  }
+  if (!loaded) return null;
 
   return (
     <Provider store={store}>
-    <ThemeProvider value={colorScheme === 'light' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name='welcome' options={{ headerShown: false }} />
-        <Stack.Screen name='signup' options={{ headerShown: true, headerTitleAlign: 'center', headerTitle: 'Sign Up', }} />
-        <Stack.Screen name='signup-2' options={{ headerShown: true, headerTitle: 'Sign Up', headerTitleAlign: 'center' }} />
-        <Stack.Screen name='create-ride' options={{ headerShown: true, headerTitle: 'Create Ride', headerTitleAlign: 'center' }} />
-
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+      <PersistGate loading={null} persistor={persistor}>
+        <ThemeProvider value={colorScheme === 'light' ? DarkTheme : DefaultTheme}>
+          <Stack>
+            <Stack.Screen name='welcome' options={{ headerShown: false }} />
+            <Stack.Screen name='signup' options={{ headerShown: true, headerTitleAlign: 'center', headerTitle: 'Sign Up' }} />
+            <Stack.Screen name='signup-2' options={{ headerShown: true, headerTitle: 'Sign Up', headerTitleAlign: 'center' }} />
+            <Stack.Screen name='create-ride' options={{ headerShown: true, headerTitle: 'Create Ride', headerTitleAlign: 'center' }} />
+            <Stack.Screen name='TermsAndConditions' options={{ headerShown: true, headerTitle: 'Terms & Conditions', headerTitleAlign: 'center' }} />
+            <Stack.Screen name='PrivacyPolicy' options={{ headerShown: true, headerTitle: 'Privacy Policy', headerTitleAlign: 'center' }} />
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </PersistGate>
     </Provider>
   );
 }
+
 

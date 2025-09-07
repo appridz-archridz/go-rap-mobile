@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View
 } from 'react-native';
 import FilePicker from '../components/FilePicker';
@@ -15,51 +16,53 @@ import PressableButton from '../components/PressableButton';
 
 const SignUp2 = () => {
   const [profilePic, setProfilePic] = useState(null);
+  const [lastChangedField, setLastChangedField] = useState(null);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const customStyles = {
-    bgColor: '#2094F3',
-    color: '#fff'
-  };
+  const customStyles = { bgColor: '#2094F3', color: '#fff' };
 
-  const validateForm = () => {
-    let valid = true;
-    let newErrors = {};
+  const validate = (field) => {
+    let newErrors = { ...errors };
 
-    if (!profilePic) {
-      newErrors.profilePic = 'Please upload a profile picture';
-      valid = false;
+    if (!field || field === 'profilePic') {
+      newErrors.profilePic = profilePic ? '' : 'Please upload a profile picture';
     }
 
-    if (!password) {
-      newErrors.password = 'Password is required';
-      valid = false;
-    } else if (password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-      valid = false;
+    if (!field || field === 'password') {
+      if (!password) newErrors.password = 'Password is required';
+      else if (password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+      else newErrors.password = '';
     }
 
-    if (!confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-      valid = false;
-    } else if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-      valid = false;
+    if (!field || field === 'confirmPassword') {
+      if (!confirmPassword) newErrors.confirmPassword = 'Please confirm your password';
+      else if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+      else newErrors.confirmPassword = '';
     }
 
     setErrors(newErrors);
-    return valid;
+    if (!field) return Object.values(newErrors).every(err => !err);
   };
 
+  useEffect(() => {
+    if (lastChangedField) validate(lastChangedField);
+  }, [profilePic, password, confirmPassword, lastChangedField]);
+
   const handleSubmit = () => {
-    // if (validateForm()) {
-      // 🚀 Submit form (API call, etc.)
-      // Alert.alert('Success', 'Account created successfully!');
-      router.push('/login');
-    // }
+    if (validate()) router.push('/login');
   };
+
+  const navigateToTermsAndCondition = () => {
+    router.push('/TermsAndConditions');
+  };
+
+  const navigateToPrivacyPolicy = () => {
+    router.push('/PrivacyPolicy');
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -74,21 +77,29 @@ const SignUp2 = () => {
             {/* Profile Pic */}
             <View style={styles.container}>
               <Text style={styles.label}>Upload Profile Pic</Text>
-              <FilePicker onFileSelected={setProfilePic} />
+              <FilePicker onFileSelected={(file) => handleFileSelected(file)} />
               {errors.profilePic && <Text style={styles.error}>{errors.profilePic}</Text>}
             </View>
 
             {/* Password */}
             <View style={styles.container}>
               <Text style={styles.label}>Create Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter a strong password"
-                placeholderTextColor="gray"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-              />
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter a strong password"
+                  placeholderTextColor="gray"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={(text) => { setPassword(text); setLastChangedField('password'); }}
+                />
+                <TouchableOpacity
+                  style={styles.showButton}
+                  onPress={() => setShowPassword(prev => !prev)}
+                >
+                  <Text style={styles.showButtonText}>{showPassword ? 'Hide' : 'Show'}</Text>
+                </TouchableOpacity>
+              </View>
               <Text style={styles.bottomText}>Use 8 or more characters</Text>
               {errors.password && <Text style={styles.error}>{errors.password}</Text>}
             </View>
@@ -96,17 +107,26 @@ const SignUp2 = () => {
             {/* Confirm Password */}
             <View style={styles.container}>
               <Text style={styles.label}>Confirm Password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm your password"
-                placeholderTextColor="gray"
-                secureTextEntry
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-              />
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirm your password"
+                  placeholderTextColor="gray"
+                  secureTextEntry={!showConfirmPassword}
+                  value={confirmPassword}
+                  onChangeText={(text) => { setConfirmPassword(text); setLastChangedField('confirmPassword'); }}
+                />
+                <TouchableOpacity
+                  style={styles.showButton}
+                  onPress={() => setShowConfirmPassword(prev => !prev)}
+                >
+                  <Text style={styles.showButtonText}>{showConfirmPassword ? 'Hide' : 'Show'}</Text>
+                </TouchableOpacity>
+              </View>
               <Text style={styles.bottomText}>Use 8 or more characters</Text>
               {errors.confirmPassword && <Text style={styles.error}>{errors.confirmPassword}</Text>}
             </View>
+
           </View>
 
           {/* Footer */}
@@ -121,11 +141,12 @@ const SignUp2 = () => {
             <View style={styles.confirmTextContainer}>
               <Text style={styles.confirmText}>
                 By clicking "Sign Up Now", you agree to our{" "}
-                <Text style={styles.linkText}>Terms & Conditions</Text> and{" "}
-                <Text style={styles.linkText}>Privacy Policy</Text>.
+                <Text style={styles.linkText} onPress={navigateToTermsAndCondition}>Terms & Conditions</Text> and{" "}
+                <Text style={styles.linkText} onPress={navigateToPrivacyPolicy}>Privacy Policy</Text>.
               </Text>
             </View>
           </View>
+
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -140,17 +161,24 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     padding: 20,
     paddingBottom: 50,
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
   },
   inputFields: {
     flex: 1,
     gap: 16,
+  },
+  container: {
+    marginBottom: 8,
   },
   label: {
     color: 'black',
     fontSize: 16,
     marginBottom: 8,
     fontFamily: 'work-sans-medium',
+  },
+  inputWrapper: {
+    position: 'relative',
+    width: '100%',
   },
   input: {
     width: '100%',
@@ -161,6 +189,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingVertical: 8,
     paddingHorizontal: 16,
+    paddingRight: 60,
+  },
+  showButton: {
+    position: 'absolute',
+    right: 10,
+    top: 10,
+    padding: 5,
+  },
+  showButtonText: {
+    color: '#2094F3',
+    fontWeight: 'bold',
   },
   bottomText: {
     color: 'gray',
@@ -192,3 +231,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
+
