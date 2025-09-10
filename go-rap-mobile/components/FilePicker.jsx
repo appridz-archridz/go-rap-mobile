@@ -1,6 +1,13 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useState } from 'react';
-import { ActivityIndicator, Image as RNImage, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image as RNImage,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import { uploadMedia } from './services/cloudinary';
 
 // Theme object for maintainable colors (aligned with SignUp2)
@@ -43,24 +50,26 @@ const FilePicker = ({ onFileSelected, disabled }) => {
         return;
       }
 
-      // Upload to Cloudinary and expect an object with secure_url
+      // Upload to Cloudinary
       const response = await uploadMedia(file.uri, file.mimeType || file.type);
-      if (!response?.secure_url || typeof response.secure_url !== 'string') {
+
+      const fileUrl = response?.secure_url || response?.url;
+      if (!fileUrl || typeof fileUrl !== 'string') {
         setError('Failed to upload file: Invalid URL');
         return;
       }
 
       const fileData = {
-        uri: response.secure_url,
+        uri: fileUrl,
         type: file.mimeType || file.type,
-        size: file.size || response.bytes, // Include size from Cloudinary response or file
+        size: file.size || response.bytes || null,
       };
+
       setSelectedFile(fileData);
-      onFileSelected?.(fileData); // Pass file to parent
-    } catch (error) {
-      const errorMessage = 'Failed to pick or upload file';
-      setError(errorMessage);
-      console.error('File pick/upload error:', error);
+      onFileSelected?.(fileData);
+    } catch (err) {
+      setError('Failed to pick or upload file');
+      console.error('File pick/upload error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -79,31 +88,26 @@ const FilePicker = ({ onFileSelected, disabled }) => {
             <ActivityIndicator size="small" color={theme.primary} />
             <Text style={styles.loadingText}>Uploading...</Text>
           </View>
-        ) : selectedFile && selectedFile.uri && typeof selectedFile.uri === 'string' ? (
+        ) : selectedFile && selectedFile.uri ? (
           <View style={styles.fileContainer}>
             <RNImage
               source={{ uri: selectedFile.uri }}
               style={styles.image}
-              resizeMode="contain"
+              resizeMode="cover"
               accessibilityLabel="Selected profile picture"
-              onError={(e) => {
-                console.error('Image load error:', e.nativeEvent.error);
-                setError('Failed to load image');
-                setSelectedFile(null); // Reset selected file on error
+            />
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedFile(null);
                 onFileSelected?.(null);
               }}
-            />
-            <View>
+            >
               <RNImage
                 source={require('../assets/images/red-cross.png')}
                 style={styles.closeIcon}
-                accessibilityLabel="Close icon"
-                onPress={() => {
-                  setSelectedFile(null);
-                  onFileSelected?.(null);
-                }}
+                accessibilityLabel="Remove file"
               />
-            </View>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.input}>
@@ -147,7 +151,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   image: {
-    width: '48',
+    width: 48,
     height: 48,
     borderRadius: 8,
   },
@@ -165,7 +169,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   fileContainer: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -174,5 +177,5 @@ const styles = StyleSheet.create({
   closeIcon: {
     width: 16,
     height: 16,
-  }
+  },
 });
