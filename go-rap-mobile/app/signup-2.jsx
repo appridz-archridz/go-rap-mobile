@@ -1,6 +1,7 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -13,10 +14,15 @@ import {
 } from 'react-native';
 import FilePicker from '../components/FilePicker';
 import PressableButton from '../components/PressableButton';
+import { signUp } from '../components/services/authService';
+
+const eyeOpen = require('../assets/images/eye-open.png');
+const eyeClosed = require('../assets/images/eye-closed.png');
 
 const SignUp2 = () => {
+  const { fullName, email, phone } = useLocalSearchParams();
+
   const [profilePic, setProfilePic] = useState(null);
-  const [lastChangedField, setLastChangedField] = useState(null);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState({});
@@ -25,44 +31,70 @@ const SignUp2 = () => {
 
   const customStyles = { bgColor: '#2094F3', color: '#fff' };
 
-  const validate = (field) => {
-    let newErrors = { ...errors };
+  // 🔄 Validate single field live
+  const validateField = (field, value) => {
+    let message = '';
 
-    if (!field || field === 'profilePic') {
-      newErrors.profilePic = profilePic ? '' : 'Please upload a profile picture';
+    if (field === 'profilePic') {
+      if (!value) message = 'Please upload a profile picture';
     }
 
-    if (!field || field === 'password') {
-      if (!password) newErrors.password = 'Password is required';
-      else if (password.length < 8) newErrors.password = 'Password must be at least 8 characters';
-      else newErrors.password = '';
+    if (field === 'password') {
+      if (!value) message = 'Password is required';
+      else if (value.length < 8) message = 'Password must be at least 8 characters';
     }
 
-    if (!field || field === 'confirmPassword') {
-      if (!confirmPassword) newErrors.confirmPassword = 'Please confirm your password';
-      else if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
-      else newErrors.confirmPassword = '';
+    if (field === 'confirmPassword') {
+      if (!value) message = 'Please confirm your password';
+      else if (value !== password) message = 'Passwords do not match';
     }
 
-    setErrors(newErrors);
-    if (!field) return Object.values(newErrors).every(err => !err);
+    setErrors((prev) => ({ ...prev, [field]: message }));
   };
 
-  useEffect(() => {
-    if (lastChangedField) validate(lastChangedField);
-  }, [profilePic, password, confirmPassword, lastChangedField]);
+  // 🔄 Validate whole form on submit
+  const validate = () => {
+    const fieldsToValidate = {
+      profilePic,
+      password,
+      confirmPassword,
+    };
 
-  const handleSubmit = () => {
-    if (validate()) router.push('/login');
+    let allValid = true;
+
+    Object.entries(fieldsToValidate).forEach(([field, value]) => {
+      validateField(field, value);
+      if (
+        (field === 'profilePic' && !value) ||
+        (field === 'password' && (!value || value.length < 8)) ||
+        (field === 'confirmPassword' && (value !== password || !value))
+      ) {
+        allValid = false;
+      }
+    });
+
+    return allValid;
   };
 
-  const navigateToTermsAndCondition = () => {
-    router.push('/TermsAndConditions');
+  const handleSubmit = async () => {
+    if (validate()) {
+      const payload = {
+        userName: fullName,
+        email,
+        password,
+        phoneNumber: phone,
+        address: '',
+        role: 'USER'
+      };
+
+      const response = await signUp(payload);
+      console.log('Done with signup', response);
+      // router.push('/some-success-page')?
+    }
   };
 
-  const navigateToPrivacyPolicy = () => {
-    router.push('/PrivacyPolicy');
-  }
+  const navigateToTermsAndCondition = () => router.push('/TermsAndConditions');
+  const navigateToPrivacyPolicy = () => router.push('/PrivacyPolicy');
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -77,7 +109,12 @@ const SignUp2 = () => {
             {/* Profile Pic */}
             <View style={styles.container}>
               <Text style={styles.label}>Upload Profile Pic</Text>
-              <FilePicker onFileSelected={(file) => handleFileSelected(file)} />
+              <FilePicker
+                onFileSelected={(file) => {
+                  setProfilePic(file);
+                  validateField('profilePic', file);
+                }}
+              />
               {errors.profilePic && <Text style={styles.error}>{errors.profilePic}</Text>}
             </View>
 
@@ -91,13 +128,19 @@ const SignUp2 = () => {
                   placeholderTextColor="gray"
                   secureTextEntry={!showPassword}
                   value={password}
-                  onChangeText={(text) => { setPassword(text); setLastChangedField('password'); }}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    validateField('password', text);
+                  }}
                 />
                 <TouchableOpacity
                   style={styles.showButton}
-                  onPress={() => setShowPassword(prev => !prev)}
+                  onPress={() => setShowPassword((prev) => !prev)}
                 >
-                  <Text style={styles.showButtonText}>{showPassword ? 'Hide' : 'Show'}</Text>
+                  <Image
+                    source={showPassword ? eyeClosed : eyeOpen}
+                    style={styles.eyeIcon}
+                  />
                 </TouchableOpacity>
               </View>
               <Text style={styles.bottomText}>Use 8 or more characters</Text>
@@ -114,19 +157,24 @@ const SignUp2 = () => {
                   placeholderTextColor="gray"
                   secureTextEntry={!showConfirmPassword}
                   value={confirmPassword}
-                  onChangeText={(text) => { setConfirmPassword(text); setLastChangedField('confirmPassword'); }}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    validateField('confirmPassword', text);
+                  }}
                 />
                 <TouchableOpacity
                   style={styles.showButton}
-                  onPress={() => setShowConfirmPassword(prev => !prev)}
+                  onPress={() => setShowConfirmPassword((prev) => !prev)}
                 >
-                  <Text style={styles.showButtonText}>{showConfirmPassword ? 'Hide' : 'Show'}</Text>
+                  <Image
+                    source={showConfirmPassword ? eyeClosed : eyeOpen}
+                    style={styles.eyeIcon}
+                  />
                 </TouchableOpacity>
               </View>
               <Text style={styles.bottomText}>Use 8 or more characters</Text>
               {errors.confirmPassword && <Text style={styles.error}>{errors.confirmPassword}</Text>}
             </View>
-
           </View>
 
           {/* Footer */}
@@ -182,28 +230,30 @@ const styles = StyleSheet.create({
   },
   input: {
     width: '100%',
-    borderBottomColor: '#ECEBF0',
+    borderColor: '#ECEBF0',
     borderWidth: 1,
     borderRadius: 8,
     height: 48,
     fontSize: 16,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    paddingRight: 60,
+    paddingRight: 48,
   },
   showButton: {
     position: 'absolute',
     right: 10,
     top: 10,
-    padding: 5,
+    padding: 4,
   },
-  showButtonText: {
-    color: '#2094F3',
-    fontWeight: 'bold',
+  eyeIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#2094F3',
   },
   bottomText: {
     color: 'gray',
     fontSize: 12,
+    marginTop: 4,
   },
   button: {
     marginTop: 32,
@@ -218,7 +268,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: 'gray',
     fontSize: 14,
-    lineHeight: 16,
+    lineHeight: 18,
     width: '90%',
   },
   linkText: {
@@ -231,4 +281,3 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-

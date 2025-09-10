@@ -1,9 +1,8 @@
 import { router } from "expo-router";
-import { Image, Pressable } from "react-native";
-import { StyleSheet, Text, View } from "react-native";
-import PressableButton from "../components/PressableButton";
+import { Image, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch } from "react-redux";
+import PressableButton from "../components/PressableButton";
 import { login } from "../redux/authSlice";
 
 const Welcome = () => {
@@ -20,7 +19,7 @@ const Welcome = () => {
             },
         };
         dispatch(login(payload));
-        router.push("/signup");
+        router.push("/login");
     }
 
     customStyles = {
