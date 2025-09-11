@@ -1,5 +1,6 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -12,9 +13,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useDispatch, useSelector } from "react-redux";
 import PressableButton from "../components/PressableButton";
-import { login } from "../components/services/authService";
+import { AuthService } from "../components/services/authService";
 import { inputField } from "../global-css";
+import { login } from "../redux/authSlice";
 
 const eyeOpen = require("../assets/images/eye-open.png");
 const eyeClosed = require("../assets/images/eye-closed.png");
@@ -25,6 +28,14 @@ const Login = () => {
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({ email: "", password: "" });
+  const dispatch = useDispatch();
+  const { isAuthenticated } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/search-ride");
+    }
+  }, [isAuthenticated])
 
   const validateField = (field, value) => {
     let message = "";
@@ -54,6 +65,7 @@ const Login = () => {
   };
 
   const handleLogin = async () => {
+
     if (!validate()) return;
 
     const payLoad = {
@@ -61,12 +73,32 @@ const Login = () => {
       password: form.password,
     };
 
-    const response = await login(payLoad);
-    if (response.status === "success") {
-      console.log("Login successful", response);
-      router.push("/search-ride");
-    } else {
-      console.log("Login failed", response);
+    try {
+      const { data } = await AuthService.login(payLoad);
+      const token = data.data?.token;
+
+      if (data.statusCode === "200 OK") {
+        const stateData = {
+          token: token,
+          userName: data.data.userName,
+          email: data.data.email,
+          phone: data.data.phoneNumber
+        }
+        await AsyncStorage.setItem("token", token);
+        dispatch(login(stateData));
+        router.push("/search-ride");
+
+      } else {
+        console.log("Login failed:", data.message);
+      }
+    } catch (error) {
+      if (error.response) {
+        console.log("Server error:", error.response.data.message);
+      } else if (error.request) {
+        console.log("Network error: server not reachable");
+      } else {
+        console.log("Unexpected error:", error.message);
+      }
     }
   };
 
@@ -127,14 +159,17 @@ const Login = () => {
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
               />
+
               <TouchableOpacity
                 style={styles.eyeButton}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Image style={styles.eyeIcon} source={showPassword ? eyeClosed : eyeOpen} />
+                <Image
+                  style={styles.eyeIcon}
+                  source={showPassword ? eyeClosed : eyeOpen}
+                />
               </TouchableOpacity>
-              <Text style={styles.bottomText}>Use 8 or more characters</Text>
-              {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+
             </View>
 
             {/* Forgot Password */}
@@ -186,16 +221,22 @@ const styles = StyleSheet.create({
   formContainer: { width: "100%" },
   title: { fontSize: 24, fontWeight: "700", color: "#000", textAlign: "center", marginBottom: 6 },
   subtitle: { fontSize: 15, color: "#666", textAlign: "center", marginBottom: 30 },
-  inputWrapper: { marginBottom: 18 },
+  inputWrapper: {
+    marginBottom: 18,
+    position: "relative", // allows absolute positioning inside
+  },
   eyeButton: {
     position: "absolute",
     right: 12,
     top: "50%",
-    transform: [{ translateY: -12 }],
+    transform: [{ translateY: -11 }], // center vertically (since icon is ~22px tall)
     padding: 4,
   },
-  eyeIcon: { height: 22, width: 22, tintColor: "#666" },
-  bottomText: { color: "gray", fontSize: 12, marginTop: 4, marginLeft: 4 },
+  eyeIcon: {
+    height: 22,
+    width: 22,
+    tintColor: "#666",
+  }, bottomText: { color: "gray", fontSize: 12, marginTop: 4, marginLeft: 4 },
   forgotPasswordButton: { alignSelf: "flex-end", marginBottom: 20 },
   forgotPasswordText: { color: "#0057D9", fontSize: 14, fontWeight: "600" },
   dividerContainer: { flexDirection: "row", alignItems: "center", marginVertical: 16 },
