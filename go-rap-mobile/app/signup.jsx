@@ -89,9 +89,9 @@ const SignUp = () => {
   };
 
   const navigateToSignUp2 = () => {
-    // if (validate()) {
+    if (validate()) {
       router.push("/signup-2", { detailsForm });
-    // }
+    }
   };
 
   const customStyles = {
