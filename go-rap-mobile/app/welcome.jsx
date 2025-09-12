@@ -1,25 +1,36 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
+import { useEffect } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch } from "react-redux";
 import PressableButton from "../components/PressableButton";
-import { login } from "../redux/authSlice";
+import { HelperService } from "../services/helper-service";
 
 const Welcome = () => {
 
     const dispatch = useDispatch();
 
-    const GetStartedOnPress = () => {
-        const payload = {
-            token: "abc123xyz",
-            userDetails: {
-                username: "ranadeep",
-                email: "ranadeep@example.com",
-                phone: "9121923255",
-            },
+    useEffect(() => {
+        const fetchToken = async () => {
+            try {
+                const token = await AsyncStorage.getItem("token");
+                console.log('got the token from asyncstorage', token);
+
+                if (token) {
+                    // dispatch((token));
+                    HelperService.setToken(token);
+                }
+            } catch (error) {
+                console.error("Error fetching token:", error);
+            }
         };
-        dispatch(login(payload));
-        router.push("/signup");
+        fetchToken();
+    }, []);
+
+
+    const GetStartedOnPress = () => {
+        router.push("/login");
     }
 
     const customStyles = {

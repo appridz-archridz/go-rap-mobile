@@ -1,25 +1,33 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
+import { inputField } from "../global-css";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+  const validateEmail = (value) => {
+    if (!value) return "Email is required";
+    if (!/\S+@\S+\.\S+/.test(value)) return "Enter a valid email address";
+    return "";
+  };
+
   const handleSendReset = () => {
-    if (!email) {
-      Alert.alert("Error", "Please enter your email address");
+    const validationError = validateEmail(email);
+    if (validationError) {
+      setError(validationError);
       return;
     }
+    setError("");
     setIsSubmitted(true);
     console.log("Reset password for:", email);
   };
@@ -32,26 +40,18 @@ export default function ForgotPassword() {
     return (
       <View style={styles.container}>
         <View style={styles.successContainer}>
-          <Image
-            style={styles.successIcon}
-            // source={require("../assets/images/email-sent.png")}
-          />
           <Text style={styles.successTitle}>Check Your Email</Text>
           <Text style={styles.successText}>
             We have sent a password reset link to{"\n"}
             <Text style={styles.emailText}>{email}</Text>
           </Text>
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={handleBackToLogin}
-          >
-            <Text style={styles.loginButtonText}>Back to Login</Text>
+          <TouchableOpacity style={styles.button} onPress={handleBackToLogin}>
+            <Text style={styles.buttonText}>Back to Login</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.resendButton}
-            onPress={handleSendReset}
-          >
-            <Text style={styles.resendText}>Did not receive email? Resend</Text>
+          <TouchableOpacity style={styles.linkButton} onPress={handleSendReset}>
+            <Text style={styles.linkButtonText}>
+              Did not receive email? Resend
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -63,50 +63,40 @@ export default function ForgotPassword() {
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
     >
-      <TouchableOpacity style={styles.backButton} onPress={handleBackToLogin}>
-        <Image
-          style={styles.backIcon}
-          source={require("../assets/images/location.png")}
-        />
-      </TouchableOpacity>
+      {/* Back button */}
+      <TouchableOpacity style={styles.backButton} onPress={handleBackToLogin} />
 
       <View style={styles.forgotContainer}>
-        <Image
-          style={styles.forgotIcon}
-          source={require("../assets/images/location.png")}
-        />
         <Text style={styles.forgotTitle}>Forgot Password?</Text>
         <Text style={styles.forgotSubtitle}>
-          No worries! Enter your email address and we will send you a reset
-          link.
+          No worries! Enter your email address and we will send you a reset link.
         </Text>
 
+        {/* Email input */}
         <View style={styles.inputContainer}>
-          <Image
-            style={styles.icon}
-            source={require("../assets/images/location.png")}
-          />
           <TextInput
-            style={styles.input}
+            style={inputField}
             placeholder="Email address"
             placeholderTextColor="#999"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (error) setError(validateEmail(text));
+            }}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
           />
         </View>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <TouchableOpacity style={styles.loginButton} onPress={handleSendReset}>
-          <Text style={styles.loginButtonText}>Send Reset Link</Text>
+        {/* Buttons */}
+        <TouchableOpacity style={styles.button} onPress={handleSendReset}>
+          <Text style={styles.buttonText}>Send Reset Link</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.backToLoginButton}
-          onPress={handleBackToLogin}
-        >
-          <Text style={styles.backToLoginText}>Back to Login</Text>
+        <TouchableOpacity style={styles.linkButton} onPress={handleBackToLogin}>
+          <Text style={styles.linkButtonText}>Back to Login</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -114,37 +104,10 @@ export default function ForgotPassword() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  contentContainer: {
-    flexGrow: 1,
-    justifyContent: "center",
-    padding: 20,
-  },
-  backButton: {
-    position: "absolute",
-    top: 50,
-    left: 20,
-    zIndex: 1,
-    padding: 8,
-  },
-  backIcon: {
-    width: 24,
-    height: 24,
-    tintColor: "#000",
-  },
-  forgotContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  forgotIcon: {
-    width: 50,
-    height: 50,
-    marginBottom: 24,
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
+  contentContainer: { flexGrow: 1, justifyContent: "center", padding: 20 },
+  backButton: { position: "absolute", top: 50, left: 20, zIndex: 1, padding: 8 },
+  forgotContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
   forgotTitle: {
     fontSize: 24,
     fontWeight: "700",
@@ -156,64 +119,39 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
     textAlign: "center",
-    marginBottom: 32,
+    marginBottom: 24,
     lineHeight: 22,
   },
-  inputContainer: {
+  inputContainer: { width: "100%" },
+  errorText: {
+    color: "red",
+    fontSize: 12,
+    marginTop: 6,
+    alignSelf: "flex-start",
+    marginLeft: 6,
+  },
+  button: {
+    height: 52,
+    backgroundColor: "#2094F3FF",
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 20,
     width: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 12,
-    padding: 12,
-    marginVertical: 8,
-    backgroundColor: "#fff",
   },
-  icon: {
-    width: 22,
-    height: 22,
-    marginRight: 10,
-    tintColor: "#0057D9",
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: "#000",
-    outlineStyle: "none",
-  },
-  loginButton: {
-    backgroundColor: "#0057D9",
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  loginButtonText: {
+  buttonText: {
     color: "#fff",
-    fontWeight: "700",
     fontSize: 16,
+    fontWeight: "700",
+    textAlign: "center",
   },
-  backToLoginButton: {
-    marginTop: 16,
-  },
-  backToLoginText: {
-    color: "#0057D9",
-    fontSize: 14,
-    fontWeight: "600",
-  },
+  linkButton: { marginTop: 16 },
+  linkButtonText: { color: "#0057D9", fontSize: 14, fontWeight: "600" },
   successContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
-  },
-  successIcon: {
-    width: 100,
-    height: 100,
-    tintColor: "#4CAF50",
-    marginBottom: 24,
   },
   successTitle: {
     fontSize: 24,
@@ -229,16 +167,5 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     lineHeight: 22,
   },
-  emailText: {
-    fontWeight: "600",
-    color: "#0057D9",
-  },
-  resendButton: {
-    marginTop: 16,
-  },
-  resendText: {
-    color: "#0057D9",
-    fontSize: 14,
-    fontWeight: "600",
-  },
+  emailText: { fontWeight: "600", color: "#0057D9" },
 });

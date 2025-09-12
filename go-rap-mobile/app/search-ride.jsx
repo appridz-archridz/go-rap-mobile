@@ -1,14 +1,15 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { AuthService } from "../components/services/authService";
 import { getLocations, getRides } from "../services/ride-service";
 // import { getLocations, getRides } from "../components/services/rideService";
 
@@ -29,6 +30,7 @@ export default function SearchRide() {
 
   // Fetch rides whenever from & to are selected
   useEffect(() => {
+    AuthService.getProfileInfo();
     if (from && to) {
       setLoading(true);
       (async () => {

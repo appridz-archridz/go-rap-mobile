@@ -18,7 +18,6 @@ import { inputField } from "../global-css";
 const SignUp = () => {
   const selector = useSelector((state) => state);
 
-  const [lastChangedField, setLastChangedField] = useState(null);
   const [detailsForm, setDetailsForm] = useState({
     fullName: "",
     email: "",
@@ -31,66 +30,73 @@ const SignUp = () => {
     phone: "",
   });
 
-  const handleChange = (name, value) => {
-    setDetailsForm({ ...detailsForm, [name]: value });
-    setLastChangedField(name);
+  // ✅ Validate individual field (used onChangeText)
+  const validateField = (field, value) => {
+    let errorMessage = "";
+
+    if (field === "fullName") {
+      if (!value.trim()) {
+        errorMessage = "Full Name is required";
+      }
+    }
+
+    if (field === "email") {
+      if (!value.trim()) {
+        errorMessage = "Email Address is required";
+      } else if (
+        !/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(value.trim())
+      ) {
+        errorMessage = "Please enter a valid Email Address";
+      }
+    }
+
+    if (field === "phone") {
+      if (!value.trim()) {
+        errorMessage = "Phone Number is required";
+      } else if (!/^\d+$/.test(value.trim())) {
+        errorMessage = "Phone Number must contain only digits";
+      } else if (value.trim().length !== 10) {
+        errorMessage = "Phone Number must be exactly 10 digits";
+      }
+    }
+
+    setErrors((prev) => ({ ...prev, [field]: errorMessage }));
   };
 
-  useEffect(() => {
-    if (lastChangedField) {
-      validate(lastChangedField);
-    }
-  }, [detailsForm, lastChangedField]);
+  // ✅ Validate entire form (used on button press)
+  const validate = () => {
+    let allValid = true;
+
+    Object.keys(detailsForm).forEach((field) => {
+      validateField(field, detailsForm[field]);
+      if (detailsForm[field].trim() === "" || errors[field]) {
+        allValid = false;
+      }
+    });
+
+    return allValid;
+  };
+
+  // ✅ Update form + validate live
+  const handleChange = (name, value) => {
+    setDetailsForm({ ...detailsForm, [name]: value });
+    validateField(name, value);
+  };
 
   useEffect(() => {
     console.log(selector.auth);
   }, [selector]);
 
-  const validate = (field) => {
-    let newErrors = { ...errors };
-
-    if (!field || field === "fullName") {
-      if (!detailsForm.fullName.trim()) {
-        newErrors.fullName = "Full Name is required";
-      } else {
-        newErrors.fullName = "";
-      }
-    }
-
-    if (!field || field === "email") {
-      if (!detailsForm.email.trim()) {
-        newErrors.email = "Email Address is required";
-      } else if (
-        !/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(detailsForm.email.trim())
-      ) {
-        newErrors.email = "Please enter a valid Email Address";
-      } else {
-        newErrors.email = "";
-      }
-    }
-
-    if (!field || field === "phone") {
-      if (!detailsForm.phone.trim()) {
-        newErrors.phone = "Phone Number is required";
-      } else if (!/^\d+$/.test(detailsForm.phone.trim())) {
-        newErrors.phone = "Phone Number must contain only digits";
-      } else if (detailsForm.phone.trim().length !== 10) {
-        newErrors.phone = "Phone Number must be exactly 10 digits";
-      } else {
-        newErrors.phone = "";
-      }
-    }
-
-    setErrors(newErrors);
-
-    if (!field) {
-      return Object.values(newErrors).every((err) => !err);
-    }
-  };
-
   const navigateToSignUp2 = () => {
     if (validate()) {
-      router.push("/signup-2", { detailsForm });
+      router.push({
+        pathname: "/signup-2",
+        params: {
+          fullName: detailsForm.fullName,
+          email: detailsForm.email,
+          phone: detailsForm.phone,
+        },
+      });
     }
   };
 
@@ -131,6 +137,7 @@ const SignUp = () => {
                 placeholderTextColor="gray"
                 value={detailsForm.fullName}
                 onChangeText={(text) => handleChange("fullName", text)}
+                autoCapitalize="words"
               />
               {errors.fullName ? (
                 <Text style={styles.errorText}>{errors.fullName}</Text>
@@ -145,6 +152,9 @@ const SignUp = () => {
                 placeholderTextColor="gray"
                 value={detailsForm.email}
                 onChangeText={(text) => handleChange("email", text)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
               />
               {errors.email ? (
                 <Text style={styles.errorText}>{errors.email}</Text>
@@ -159,6 +169,7 @@ const SignUp = () => {
                 placeholderTextColor="gray"
                 value={detailsForm.phone}
                 keyboardType="phone-pad"
+                maxLength={10}
                 onChangeText={(text) => handleChange("phone", text)}
               />
               {errors.phone ? (
@@ -234,5 +245,9 @@ const styles = StyleSheet.create({
     color: "gray",
     fontSize: 12,
     paddingBottom: 36,
+  },
+  inputError: {
+    borderColor: "red",
+    borderWidth: 1,
   },
 });
