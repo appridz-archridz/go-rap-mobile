@@ -18,7 +18,6 @@ const Welcome = () => {
                 console.log('got the token from asyncstorage', token);
 
                 if (token) {
-                    // dispatch((token));
                     HelperService.setToken(token);
                 }
             } catch (error) {
