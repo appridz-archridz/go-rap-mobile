@@ -33,7 +33,7 @@ const Login = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace("/search-ride");
+      router.replace("/main");
     }
   }, [isAuthenticated])
 
