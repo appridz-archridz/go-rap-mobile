@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
@@ -44,42 +45,14 @@ export default function ProfileScreen() {
       title: 'My Rides',
       subtitle: 'View your created and joined rides',
       icon: 'car-outline',
-      onPress: () => Alert.alert('My Rides', 'Feature coming soon!'),
+      onPress: () =>router.push("/my-ride"),
     },
     {
       id: 2,
-      title: 'Trip History',
-      subtitle: 'View your past journeys',
-      icon: 'time-outline',
-      onPress: () => Alert.alert('Trip History', 'Feature coming soon!'),
-    },
-    {
-      id: 3,
       title: 'Payment Methods',
       subtitle: 'Manage your payment options',
       icon: 'card-outline',
       onPress: () => Alert.alert('Payment Methods', 'Feature coming soon!'),
-    },
-    {
-      id: 4,
-      title: 'Notifications',
-      subtitle: 'Manage notification preferences',
-      icon: 'notifications-outline',
-      onPress: () => Alert.alert('Notifications', 'Feature coming soon!'),
-    },
-    {
-      id: 5,
-      title: 'Help & Support',
-      subtitle: 'Get help and contact support',
-      icon: 'help-circle-outline',
-      onPress: () => Alert.alert('Help & Support', 'Feature coming soon!'),
-    },
-    {
-      id: 6,
-      title: 'Settings',
-      subtitle: 'App preferences and privacy',
-      icon: 'settings-outline',
-      onPress: () => Alert.alert('Settings', 'Feature coming soon!'),
     },
   ];
 

@@ -66,7 +66,7 @@ export default function CreateRide() {
           </View>
           <Text style={styles.label}>Time</Text>
           <View style={styles.inputContainer}>
-            <Image style={styles.icon} source={require("../assets/images/clock.png")} />
+            <Image style={styles.icon} source={require("../../assets/images/clock.png")} />
             <TextInput
               style={styles.input}
               placeholder="HH:MM"
@@ -89,7 +89,7 @@ export default function CreateRide() {
       </View> */}
           <Text style={styles.label}>Amount</Text>
           <View style={styles.inputContainer}>
-            <Image style={styles.icon} source={require("../assets/images/location.png")} />
+            <Image style={styles.icon} source={require("../../assets/images/location.png")} />
             <TextInput
               style={styles.input}
               placeholder="Enter Amount"
