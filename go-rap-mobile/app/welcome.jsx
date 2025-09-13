@@ -18,7 +18,6 @@ const Welcome = () => {
                 console.log('got the token from asyncstorage', token);
 
                 if (token) {
-                    // dispatch((token));
                     HelperService.setToken(token);
                 }
             } catch (error) {
@@ -33,7 +32,7 @@ const Welcome = () => {
         router.push("/login");
     }
 
-    customStyles = {
+    const customStyles = {
         bgColor: '#2094F3',
         color: '#fff'
     }

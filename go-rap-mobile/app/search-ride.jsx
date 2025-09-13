@@ -1,36 +1,45 @@
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Keyboard,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { AuthService } from "../components/services/authService";
-import { getLocations, getRides } from "../services/ride-service";
-// import { getLocations, getRides } from "../components/services/rideService";
-
+import { inputField } from "../global-css";
+import { getRides } from "../services/ride-service";
+import { locationService } from "../services/thirdPartyApis";
 
 export default function SearchRide() {
-  const [locations, setLocations] = useState([]);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
   const [fromQuery, setFromQuery] = useState("");
   const [toQuery, setToQuery] = useState("");
 
-  const [showFromDropdown, setShowFromDropdown] = useState(false);
-  const [showToDropdown, setShowToDropdown] = useState(false);
+  const [fromSuggestions, setFromSuggestions] = useState([]);
+  const [toSuggestions, setToSuggestions] = useState([]);
 
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch rides whenever from & to are selected
+  // refs for debounce timers
+  const fromDebounceRef = useRef(null);
+  const toDebounceRef = useRef(null);
+
+  // Run profile fetch only once
   useEffect(() => {
     AuthService.getProfileInfo();
+  }, []);
+
+  // Fetch rides whenever from & to are selected
+  useEffect(() => {
     if (from && to) {
       setLoading(true);
       (async () => {
@@ -41,120 +50,147 @@ export default function SearchRide() {
     }
   }, [from, to]);
 
-  // Fetch locations when input focused
-  const handleFocus = async (type) => {
-    const data = await getLocations();
-    setLocations(data);
-    if (type === "from") setShowFromDropdown(true);
-    if (type === "to") setShowToDropdown(true);
+  // ---- Search "from" locations with debounce ----
+  const handleFromChange = (text) => {
+    setFromQuery(text);
+    if (fromDebounceRef.current) clearTimeout(fromDebounceRef.current);
+
+    fromDebounceRef.current = setTimeout(async () => {
+      if (text.length > 1) {
+        const results = await locationService.search(text);
+        setFromSuggestions(results);
+      } else {
+        setFromSuggestions([]);
+      }
+    }, 200);
+  };
+
+  // ---- Search "to" locations with debounce ----
+  const handleToChange = (text) => {
+    setToQuery(text);
+    if (toDebounceRef.current) clearTimeout(toDebounceRef.current);
+
+    toDebounceRef.current = setTimeout(async () => {
+      if (text.length > 1) {
+        const results = await locationService.search(text);
+        setToSuggestions(results);
+      } else {
+        setToSuggestions([]);
+      }
+    }, 200);
   };
 
   // Dummy handler for card button
   const handleRideAction = (rideId) => {
     console.log("Ride action clicked for ID:", rideId);
-    // you can add logic later here
-    router.push('/create-ride');
+    router.push("/create-ride");
   };
 
   return (
-    <View style={styles.container}>
-      {/* -------- From -------- */}
-      <Text style={styles.label}>From</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Search Pickup Location"
-        value={fromQuery}
-        onChangeText={setFromQuery}
-        onFocus={() => handleFocus("from")}
-      />
-      {showFromDropdown && (
-        <FlatList
-          data={locations.filter((loc) =>
-            loc.name.toLowerCase().includes(fromQuery.toLowerCase())
-          )}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.dropdownItem}
-              onPress={() => {
-                setFrom(item.name);
-                setFromQuery(item.name);
-                setShowFromDropdown(false);
-              }}
-            >
-              <Text>{item.name}</Text>
-            </TouchableOpacity>
-          )}
-          style={styles.dropdown}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.container}>
+        {/* -------- From -------- */}
+        <Text style={styles.label}>From</Text>
+        <TextInput
+          style={inputField}
+          placeholder="Search Pickup Location"
+          value={fromQuery}
+          onChangeText={handleFromChange}
         />
-      )}
-
-      {/* -------- To -------- */}
-      <Text style={styles.label}>To</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Search Drop Location"
-        value={toQuery}
-        onChangeText={setToQuery}
-        onFocus={() => handleFocus("to")}
-      />
-      {showToDropdown && (
-        <FlatList
-          data={locations.filter((loc) =>
-            loc.name.toLowerCase().includes(toQuery.toLowerCase())
-          )}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.dropdownItem}
-              onPress={() => {
-                setTo(item.name);
-                setToQuery(item.name);
-                setShowToDropdown(false);
-              }}
-            >
-              <Text>{item.name}</Text>
-            </TouchableOpacity>
-          )}
-          style={styles.dropdown}
-        />
-      )}
-
-      {/* -------- Rides -------- */}
-      {loading ? (
-        <ActivityIndicator size="large" color="#0051a8" style={{ marginTop: 20 }} />
-      ) : (
-        <FlatList
-          data={rides}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>
-                {item.from} → {item.to}
-              </Text>
-              <Text style={styles.cardText}>Driver: {item.driver}</Text>
-              <Text style={styles.cardText}>Vehicle: {item.vehicle}</Text>
-              <Text style={styles.cardText}>Seats Available: {item.seats}</Text>
-              <Text style={styles.cardText}>
-                Date: {item.date} | {item.time}
-              </Text>
-
-              {/* Button in card */}
+        { fromSuggestions.length > 0 &&
+          <FlatList
+            data={fromSuggestions}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
               <TouchableOpacity
-                style={styles.cardButton}
-                onPress={() => handleRideAction(item.id)}
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setFrom(item.display_name);
+                  setFromQuery(item.display_name);
+                  setFromSuggestions([]);
+                }}
               >
-                <Text style={styles.cardButtonText}>View Ride</Text>
+                <Text>{item.display_name}</Text>
               </TouchableOpacity>
-            </View>
-          )}
-          ListEmptyComponent={
-            <Text style={styles.noRide}>No rides found</Text>
-          }
-          contentContainerStyle={{ marginTop: 20 }}
+            )}
+            style={styles.dropdown}
+          />
+        }
+
+        {/* -------- To -------- */}
+        <Text style={styles.label}>To</Text>
+        <TextInput
+          style={inputField}
+          placeholder="Search Drop Location"
+          value={toQuery}
+          onChangeText={handleToChange}
         />
-      )}
-    </View>
+        { toSuggestions.length > 0 &&
+          <FlatList
+            data={toSuggestions}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setTo(item.display_name);
+                  setToQuery(item.display_name);
+                  setToSuggestions([]);
+                }}
+              >
+                <Text>{item.display_name}</Text>
+              </TouchableOpacity>
+            )}
+            style={styles.dropdown}
+          />
+        }
+
+        {/* -------- Rides -------- */}
+        {loading ? (
+          <ActivityIndicator
+            size="large"
+            color="#0051a8"
+            style={{ marginTop: 20 }}
+          />
+        ) : (
+          <FlatList
+            data={rides}
+            keyExtractor={(item) => item.id?.toString() || item._id?.toString()}
+            renderItem={({ item }) => (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>
+                  {item.from} → {item.to}
+                </Text>
+                <Text style={styles.cardText}>Driver: {item.driver}</Text>
+                <Text style={styles.cardText}>Vehicle: {item.vehicle}</Text>
+                <Text style={styles.cardText}>
+                  Seats Available: {item.seats}
+                </Text>
+                <Text style={styles.cardText}>
+                  Date: {item.date} | {item.time}
+                </Text>
+
+                {/* Button in card */}
+                <TouchableOpacity
+                  style={styles.cardButton}
+                  onPress={() => handleRideAction(item.id)}
+                >
+                  <Text style={styles.cardButtonText}>View Ride</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            ListEmptyComponent={
+              from && to ? (
+                <Text style={styles.noRide}>No rides found</Text>
+              ) : (
+                <Text style={styles.noRide}>Search rides above</Text>
+              )
+            }
+            contentContainerStyle={{ marginTop: 20 }}
+          />
+        )}
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -171,11 +207,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   dropdown: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    maxHeight: 150,
-    marginBottom: 12,
+    position: "relative",
+    width: "100%",
+    backgroundColor: "#fff",
   },
   dropdownItem: {
     padding: 10,
