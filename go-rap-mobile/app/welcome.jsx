@@ -39,7 +39,7 @@ const Welcome = () => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View></View>
+            {/* <View></View> */}
             <View style={styles.content}>
                 <Image style={{ width: 120, height: 120 }} source={require('../assets/images/dummy-img.png')} />
                 <Text style={styles.heading}>
