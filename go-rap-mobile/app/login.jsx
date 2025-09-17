@@ -29,11 +29,13 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({ email: "", password: "" });
   const dispatch = useDispatch();
-  const { isAuthenticated } = useSelector((state) => state.auth);
+  const { isAuthenticated, email } = useSelector((state) => state.auth);
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace("/main");
+      console.log("user is authenticated so skipping login page", email);
+      
+      router.replace("/search-ride");
     }
   }, [isAuthenticated])
 
