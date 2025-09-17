@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const LOCATIONIQ_API_KEY = "pk.47c7847a08310e3e81cd7e20d05921a2";
-const LOCATIONIQ_AUTO_COMPLETE_BASE_URL = `https://api.locationiq.com/v1/autocomplete?key=${LOCATIONIQ_API_KEY}/&q=`;
+const LOCATIONIQ_AUTO_COMPLETE_BASE_URL = `https://api.locationiq.com/v1/autocomplete?key=${LOCATIONIQ_API_KEY}&q=`;
 
 export const locationService = {
   search: async (query) => {

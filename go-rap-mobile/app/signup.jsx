@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -16,7 +16,7 @@ import PressableButton from "../components/PressableButton";
 import { inputField } from "../global-css";
 
 const SignUp = () => {
-  const selector = useSelector((state) => state);
+  const selector = useSelector((state) => state.auth);
 
   const [detailsForm, setDetailsForm] = useState({
     fullName: "",
@@ -63,7 +63,6 @@ const SignUp = () => {
     setErrors((prev) => ({ ...prev, [field]: errorMessage }));
   };
 
-  // ✅ Validate entire form (used on button press)
   const validate = () => {
     let allValid = true;
 
@@ -77,15 +76,10 @@ const SignUp = () => {
     return allValid;
   };
 
-  // ✅ Update form + validate live
   const handleChange = (name, value) => {
     setDetailsForm({ ...detailsForm, [name]: value });
     validateField(name, value);
   };
-
-  useEffect(() => {
-    console.log(selector.auth);
-  }, [selector]);
 
   const navigateToSignUp2 = () => {
     if (validate()) {

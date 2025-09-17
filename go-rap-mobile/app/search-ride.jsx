@@ -51,7 +51,7 @@ export default function SearchRide() {
   }, [from, to]);
 
   // ---- Search "from" locations with debounce ----
-  const handleFromChange = (text) => {
+  const handleFromChange = async (text) => {
     setFromQuery(text);
     if (fromDebounceRef.current) clearTimeout(fromDebounceRef.current);
 
@@ -80,7 +80,6 @@ export default function SearchRide() {
     }, 200);
   };
 
-  // Dummy handler for card button
   const handleRideAction = (rideId) => {
     console.log("Ride action clicked for ID:", rideId);
     router.push("/create-ride");
@@ -97,7 +96,7 @@ export default function SearchRide() {
           value={fromQuery}
           onChangeText={handleFromChange}
         />
-        { fromSuggestions.length > 0 &&
+        {fromSuggestions.length > 0 &&
           <FlatList
             data={fromSuggestions}
             keyExtractor={(item, index) => index.toString()}
@@ -125,7 +124,7 @@ export default function SearchRide() {
           value={toQuery}
           onChangeText={handleToChange}
         />
-        { toSuggestions.length > 0 &&
+        {toSuggestions.length > 0 &&
           <FlatList
             data={toSuggestions}
             keyExtractor={(item, index) => index.toString()}
@@ -144,6 +143,11 @@ export default function SearchRide() {
             style={styles.dropdown}
           />
         }
+
+        <Text>
+          { from }
+          { to }
+        </Text>
 
         {/* -------- Rides -------- */}
         {loading ? (
