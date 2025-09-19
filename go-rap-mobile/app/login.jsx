@@ -35,7 +35,7 @@ const Login = () => {
     if (isAuthenticated) {
       console.log("user is authenticated so skipping login page", email);
       
-      router.replace("/search-ride");
+      router.replace("/create-ride");
     }
   }, [isAuthenticated])
 
