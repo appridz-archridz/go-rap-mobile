@@ -3,13 +3,23 @@ import { router } from "expo-router";
 import { useEffect } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import PressableButton from "../components/PressableButton";
 import { HelperService } from "../services/helper-service";
 
 const Welcome = () => {
 
     const dispatch = useDispatch();
+
+    const { isAuthenticated, email } = useSelector((state) => state.auth);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            console.log("user is authenticated so skipping login page", email);
+
+            router.replace("/search-ride");
+        }
+    }, [isAuthenticated])
 
     useEffect(() => {
         const fetchToken = async () => {

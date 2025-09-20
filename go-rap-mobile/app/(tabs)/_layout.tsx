@@ -10,36 +10,36 @@ export default function TabLayout() {
         headerShown: false, // We'll handle headers in individual screens if needed
       }}
     >
-      <Tabs.Screen 
-        name="index" 
-        options={{ href: null }} 
+      <Tabs.Screen
+        name="index"
+        options={{ href: null }}
       />
-      <Tabs.Screen 
-        name="main" 
-        options={{ 
-          title: 'Home',
+      <Tabs.Screen
+        name="search-ride"
+        options={{
+          title: 'Search Ride',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
-        }} 
+        }}
       />
-      <Tabs.Screen 
-        name="create-ride" 
-        options={{ 
+      <Tabs.Screen
+        name="create-ride"
+        options={{
           title: 'Create Ride',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="add-circle" size={size} color={color} />
           ),
-        }} 
+        }}
       />
-      <Tabs.Screen 
-        name="profile" 
-        options={{ 
+      <Tabs.Screen
+        name="profile"
+        options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
-        }} 
+        }}
       />
     </Tabs>
   );

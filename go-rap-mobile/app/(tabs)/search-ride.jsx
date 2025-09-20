@@ -11,10 +11,10 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { AuthService } from "../components/services/authService";
-import { inputField } from "../global-css";
-import { getRides } from "../services/ride-service";
-import { locationService } from "../services/thirdPartyApis";
+import { AuthService } from "../../components/services/authService";
+import { getRides } from "../../services/ride-service";
+import { locationService } from "../../services/thirdPartyApis";
+import { inputField } from './../../global-css';
 
 export default function SearchRide() {
   const [from, setFrom] = useState("");

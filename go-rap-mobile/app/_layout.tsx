@@ -64,17 +64,16 @@ export default function RootLayout() {
             <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
               <Stack screenOptions={{ headerShown: true, headerTitleAlign: "center" }}>
                 <Stack.Screen name="welcome" options={screenOptions("Welcome")} />
+                <Stack.Screen name="login" options={screenOptions("Login")} />
                 <Stack.Screen name="signup" options={screenOptions("Sign Up")} />
                 <Stack.Screen name="signup-2" options={screenOptions("Sign Up")} />
-                <Stack.Screen name="create-ride" options={screenOptions("Create Ride")} />
-                <Stack.Screen name="login" options={screenOptions("Login")} />
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                {/* <Stack.Screen name="create-ride" options={screenOptions("Create Ride")} /> */}
                 <Stack.Screen name="TermsAndConditions" options={screenOptions("Terms & Conditions")} />
                 <Stack.Screen name="PrivacyPolicy" options={screenOptions("Privacy Policy")} />
                 <Stack.Screen name="forgot-password" options={screenOptions("Forgot Password")} />
-                <Stack.Screen name="profile" options={screenOptions("Profile")} />
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="my-ride" options={screenOptions("My Rides")} />
-
+                {/* <Stack.Screen name="profile" options={screenOptions("Profile")} />
+                <Stack.Screen name="my-ride" options={screenOptions("My Rides")} /> */}
               </Stack>
             </ThemeProvider>
           </PersistGate>
