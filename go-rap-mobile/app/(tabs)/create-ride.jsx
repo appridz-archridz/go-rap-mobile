@@ -1,7 +1,10 @@
-import { Picker } from "@react-native-picker/picker";
-import { useState } from "react";
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Picker } from '@react-native-picker/picker';
+import { useEffect, useState } from 'react';
 import {
-  Image,
+  ActivityIndicator,
+  Alert,
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -10,140 +13,341 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
-} from "react-native";
+  View,
+} from 'react-native';
+import { v4 as uuidv4 } from 'uuid';
+import { RideService } from '../../services/ride-service';
+import { locationService } from '../../services/thirdPartyApis';
 
 export default function CreateRide() {
-  const now = new Date();
-  const [form, setForm] = useState({
-    pickupLocation: "",
-    dropLocation: "",
-    date: now.toISOString().split("T")[0],
-    time: `${now.getHours()}:${now.getMinutes()}`,
-    vechicleType: "",
-    availableSeats: 0,
-    totalSeats: "",
-    status: "",
-  });
+  const [startQuery, setStartQuery] = useState('');
+  const [endQuery, setEndQuery] = useState('');
+  const [startSuggestions, setStartSuggestions] = useState([]);
+  const [endSuggestions, setEndSuggestions] = useState([]);
+  const [selectedStartLocation, setSelectedStartLocation] = useState(null);
+  const [selectedEndLocation, setSelectedEndLocation] = useState(null);
+  const [rideDate, setRideDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [rideTime, setRideTime] = useState(new Date());
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [availableSeats, setAvailableSeats] = useState('1');
+  const [status, setStatus] = useState(null);
+  const [activeInput, setActiveInput] = useState(null); 
+  const [isLoading, setIsLoading] = useState(false);
+
+  const userId = '';
+
+  useEffect(() => {
+    const fetchStartLocations = async () => {
+      if (startQuery.length < 2) {
+        setStartSuggestions([]);
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const results = await locationService.search(startQuery);
+        setStartSuggestions(results);
+      } catch (error) {
+        console.error('Start location fetch failed:', error);
+        setStartSuggestions([]);
+        Alert.alert('Error', 'Failed to fetch start location suggestions.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const timeout = setTimeout(fetchStartLocations, 400);
+    return () => clearTimeout(timeout);
+  }, [startQuery]);
+
+  useEffect(() => {
+    const fetchEndLocations = async () => {
+      if (endQuery.length < 2) {
+        setEndSuggestions([]);
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const results = await locationService.search(endQuery);
+        setEndSuggestions(results);
+      } catch (error) {
+        console.error('End location fetch failed:', error);
+        setEndSuggestions([]);
+        Alert.alert('Error', 'Failed to fetch end location suggestions.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const timeout = setTimeout(fetchEndLocations, 400);
+    return () => clearTimeout(timeout);
+  }, [endQuery]);
+
+  const handleStartSelect = (location) => {
+    setSelectedStartLocation(location);
+    setStartQuery(location.display_name);
+    setStartSuggestions([]);
+    setActiveInput(null);
+  };
+
+  const handleEndSelect = (location) => {
+    setSelectedEndLocation(location);
+    setEndQuery(location.display_name);
+    setEndSuggestions([]);
+    setActiveInput(null);
+  };
+
+  const handleClear = () => {
+    setStartQuery('');
+    setEndQuery('');
+    setStartSuggestions([]);
+    setEndSuggestions([]);
+    setSelectedStartLocation(null);
+    setSelectedEndLocation(null);
+    setRideDate(new Date());
+    setRideTime(new Date());
+    setAvailableSeats('1');
+    setStatus(null);
+    setActiveInput(null);
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedStartLocation) {
+      Alert.alert('Error', 'Please select a start location.');
+      return;
+    }
+    if (!selectedEndLocation) {
+      Alert.alert('Error', 'Please select an end location.');
+      return;
+    }
+    if (!rideDate) {
+      Alert.alert('Error', 'Please select a ride date.');
+      return;
+    }
+    if (!rideTime) {
+      Alert.alert('Error', 'Please select a ride time.');
+      return;
+    }
+
+    const rideDTO = {
+      id: uuidv4(),
+      startPoint: selectedStartLocation.display_name,
+      startLatitude: parseFloat(selectedStartLocation.lat),
+      startLongitude: parseFloat(selectedStartLocation.lon),
+      destinationPoint: selectedEndLocation.display_name,
+      destinationLatitude: parseFloat(selectedEndLocation.lat),
+      destinationLongitude: parseFloat(selectedEndLocation.lon),
+      rideDate: rideDate.toISOString().split('T')[0],
+      rideTime: `${rideTime.getHours().toString().padStart(2, '0')}:${rideTime.getMinutes().toString().padStart(2, '0')}`,
+      availableSeats: parseInt(availableSeats),
+      viaPoints: [],
+    };
+
+    setIsLoading(true);
+    try {
+      const response = await RideService.createRide(userId, rideDTO);
+      setStatus('✅ Ride created successfully');
+      console.log('Response:', response.data);
+      console.log('Payload sent:', rideDTO);
+    } catch (err) {
+      console.error('Error creating ride:', err?.response?.data || err.message);
+      setStatus('❌ Failed to create ride');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderSuggestion = ({ item }) => (
+    <TouchableOpacity
+      style={styles.suggestion}
+      onPress={() => activeInput === 'start' ? handleStartSelect(item) : handleEndSelect(item)}
+    >
+      <Text style={styles.suggestionTitle}>
+        {item.display_place || item.address?.name || 'Unknown'}
+      </Text>
+      <Text style={styles.suggestionSubtitle}>
+        {item.display_address || item.display_name}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={90}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={100}
       >
-        <ScrollView>
-          <Text style={styles.label}>Pickup Location</Text>
-          <View style={styles.inputContainer}>
-            {/* <Image style={styles.icon} source={require("../assets/images/location.png")} /> */}
-            <TextInput
-              style={styles.input}
-              placeholder="Enter pickup location"
-              value={form.pickupLocation}
-              onChangeText={(text) => setForm({ ...form, pickupLocation: text })}
-            />
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <Text style={styles.header}>Create New Ride</Text>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>Start Location *</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Search start point"
+                value={startQuery}
+                onChangeText={(text) => {
+                  setStartQuery(text);
+                  setActiveInput('start');
+                }}
+                onFocus={() => setActiveInput('start')}
+              />
+            </View>
+            {activeInput === 'start' && startSuggestions.length > 0 && (
+              <FlatList
+                data={startSuggestions}
+                renderItem={renderSuggestion}
+                keyExtractor={(item, index) => index.toString()}
+                style={styles.suggestionList}
+                keyboardShouldPersistTaps="handled"
+              />
+            )}
+            {selectedStartLocation && (
+              <View style={styles.selectedLocation}>
+                <Text style={styles.selectedText}>
+                  <Text style={styles.bold}>Selected Start: </Text>
+                  {selectedStartLocation.display_name}
+                </Text>
+                <Text style={styles.selectedSubText}>
+                  Lat: {selectedStartLocation.lat}, Lon: {selectedStartLocation.lon}
+                </Text>
+              </View>
+            )}
           </View>
-          <Text style={styles.label}>Drop Location</Text>
-          <View style={styles.inputContainer}>
-            {/* <Image style={styles.icon} source={require("../assets/images/location.png")} /> */}
-            <TextInput
-              style={styles.input}
-              placeholder="Enter drop location"
-              value={form.dropLocation}
-              onChangeText={(text) => setForm({ ...form, dropLocation: text })}
-            />
+
+          <View style={styles.section}>
+            <Text style={styles.label}>End Location *</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Search destination"
+                value={endQuery}
+                onChangeText={(text) => {
+                  setEndQuery(text);
+                  setActiveInput('end');
+                }}
+                onFocus={() => setActiveInput('end')}
+              />
+            </View>
+            {activeInput === 'end' && endSuggestions.length > 0 && (
+              <FlatList
+                data={endSuggestions}
+                renderItem={renderSuggestion}
+                keyExtractor={(item, index) => index.toString()}
+                style={styles.suggestionList}
+                keyboardShouldPersistTaps="handled"
+              />
+            )}
+            {selectedEndLocation && (
+              <View style={styles.selectedLocation}>
+                <Text style={styles.selectedText}>
+                  <Text style={styles.bold}>Selected Destination: </Text>
+                  {selectedEndLocation.display_name}
+                </Text>
+                <Text style={styles.selectedSubText}>
+                  Lat: {selectedEndLocation.lat}, Lon: {selectedEndLocation.lon}
+                </Text>
+              </View>
+            )}
           </View>
-          <Text style={styles.label}>Date</Text>
-          <View style={styles.inputContainer}>
-            {/* <Image style={styles.icon} source={require("../assets/images/calendar.png")} /> */}
-            <TextInput
-              style={styles.input}
-              placeholder="YYYY-MM-DD"
-              value={form.date}
-              onChangeText={(text) => setForm({ ...form, date: text })}
-            />
-          </View>
-          <Text style={styles.label}>Time</Text>
-          <View style={styles.inputContainer}>
-            <Image style={styles.icon} source={require("../../assets/images/clock.png")} />
-            <TextInput
-              style={styles.input}
-              placeholder="HH:MM"
-              value={form.time}
-              onChangeText={(text) => setForm({ ...form, time: text })}
-            />
-          </View>
-          {/* <Text style={styles.label}>Vehicle Type</Text>
-      <View style={styles.inputContainer}>
-        <Image style={styles.icon} source={require("../assets/images/sportbike.png")} />
-        <Picker
-          selectedValue={form.vechicleType}
-          onValueChange={(itemValue) => setForm({ ...form, vechicleType: itemValue })}
-          style={styles.picker}
-        >
-          <Picker.Item label="Car" value="Car" />
-          <Picker.Item label="Bike" value="Bike" />
-          <Picker.Item label="Auto" value="Auto" />
-        </Picker>
-      </View> */}
-          <Text style={styles.label}>Amount</Text>
-          <View style={styles.inputContainer}>
-            <Image style={styles.icon} source={require("../../assets/images/location.png")} />
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Amount"
-              value={form.amount}
-              onChangeText={(text) => setForm({ ...form, amount: text })}
-            />
-          </View>
-          {/* <Text style={styles.label}>Total Seats</Text>
-      <View style={styles.inputContainer}>
-        <Image style={styles.icon} source={require("../assets/images/user.png")} />
-        <TextInput
-          style={styles.input}
-          placeholder="Enter total seats"
-          value={form.totalSeats}
-          onChangeText={(text) => setForm({ ...form, totalSeats: text })}
-        />
-      </View> */}
-          {/* <Text style={styles.label}>Available Seats</Text>
-      <View style={styles.seatsContainer}>
-        <View style={styles.iconContainer}>
-          <Image style={styles.icon} source={require("../assets/images/user.png")} />
-          <Text style={styles.label}>Current:</Text>
-        </View>
-        <View style={styles.iconContainer}>
-          <TouchableOpacity
-            style={styles.seatButton}
-            onPress={() => form.availableSeats > 0 && setForm({ ...form, availableSeats: form.availableSeats - 1 })}
-          >
-            <Text style={styles.seatButtonText}>-</Text>
-          </TouchableOpacity>
-          <Text style={styles.seatCount}>{form.availableSeats}</Text>
-          <TouchableOpacity
-            style={styles.seatButton}
-            onPress={() => setForm({ ...form, availableSeats: form.availableSeats + 1 })}
-          >
-            <Text style={styles.seatButtonText}>+</Text>
-          </TouchableOpacity>
-        </View>
-      </View> */}
-          <Text style={styles.label}>Status</Text>
-          <View style={styles.inputContainer}>
-            <Picker
-              mode="dropdown"
-              style={styles.picker}
-              selectedValue={form.status}
-              onValueChange={(itemValue) => setForm({ ...form, status: itemValue })}
+
+          <View style={styles.section}>
+            <Text style={styles.label}>Ride Date *</Text>
+            <TouchableOpacity
+              style={styles.inputContainer}
+              onPress={() => setShowDatePicker(true)}
             >
-              <Picker.Item label="Open" value="Open" />
-              <Picker.Item label="Completed" value="Completed" />
-            </Picker>
+              <Text style={styles.input}>
+                {rideDate.toISOString().split('T')[0]}
+              </Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={rideDate}
+                mode="date"
+                minimumDate={new Date()}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) setRideDate(selectedDate);
+                }}
+              />
+            )}
           </View>
-          <TouchableOpacity style={styles.submitButton}>
-            <Text style={styles.submitButtonText}>Create Ride</Text>
-          </TouchableOpacity>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>Ride Time *</Text>
+            <TouchableOpacity
+              style={styles.inputContainer}
+              onPress={() => setShowTimePicker(true)}
+            >
+              <Text style={styles.input}>
+                {`${rideTime.getHours().toString().padStart(2, '0')}:${rideTime.getMinutes().toString().padStart(2, '0')}`}
+              </Text>
+            </TouchableOpacity>
+            {showTimePicker && (
+              <DateTimePicker
+                value={rideTime}
+                mode="time"
+                onChange={(event, selectedTime) => {
+                  setShowTimePicker(false);
+                  if (selectedTime) setRideTime(selectedTime);
+                }}
+              />
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>Available Seats *</Text>
+            <View style={styles.inputContainer}>
+              <Picker
+                selectedValue={availableSeats}
+                onValueChange={(itemValue) => setAvailableSeats(itemValue)}
+                style={styles.picker}
+              >
+                {[...Array(8).keys()].map((i) => (
+                  <Picker.Item key={i + 1} label={`${i + 1}`} value={`${i + 1}`} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.submitButton]}
+              onPress={handleSubmit}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Create Ride</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.clearButton]}
+              onPress={handleClear}
+              disabled={isLoading}
+            >
+              <Text style={styles.buttonText}>Clear All</Text>
+            </TouchableOpacity>
+          </View>
+
+          {status && (
+            <View style={[
+              styles.statusContainer,
+              { backgroundColor: status.includes('✅') ? '#d4edda' : '#f8d7da' },
+            ]}>
+              <Text style={[
+                styles.statusText,
+                { color: status.includes('✅') ? '#155724' : '#721c24' },
+              ]}>
+                <Text style={styles.bold}>Status: </Text>
+                {status}
+              </Text>
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -152,86 +356,113 @@ export default function CreateRide() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    backgroundColor: "#fff",
     flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  header: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  section: {
+    marginBottom: 20,
   },
   label: {
     fontSize: 14,
-    color: "#888",
-    marginTop: 15,
-    fontWeight: "600",
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 8,
   },
   inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
+    backgroundColor: '#fff',
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
     padding: 12,
-    marginVertical: 8,
-    backgroundColor: "#fff",
-  },
-  icon: {
-    width: 22,
-    height: 22,
-    marginRight: 10,
-    tintColor: "#0057D9",
   },
   input: {
-    flex: 1,
     fontSize: 16,
-    color: "#000",
+    color: '#333',
   },
-  seatsContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 6,
+  suggestionList: {
+    maxHeight: 200,
+    backgroundColor: '#fff',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#ddd",
-    justifyContent: "space-between",
+    borderColor: '#e0e0e0',
+    marginTop: 8,
+  },
+  suggestion: {
     padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  suggestionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  suggestionSubtitle: {
+    fontSize: 12,
+    color: '#666',
+  },
+  selectedLocation: {
+    marginTop: 10,
+    padding: 12,
+    backgroundColor: '#d4edda',
     borderRadius: 8,
   },
-  seatButton: {
-    borderWidth: 1,
-    borderColor: "#007aff",
-    borderRadius: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    marginHorizontal: 6,
+  selectedText: {
+    fontSize: 14,
+    color: '#155724',
   },
-  seatButtonText: {
-    color: "#007aff",
-    fontSize: 20,
-    fontWeight: "bold",
+  selectedSubText: {
+    fontSize: 12,
+    color: '#155724',
   },
-  seatCount: {
-    fontSize: 18,
-    fontWeight: "700",
-    minWidth: 24,
-    textAlign: "center",
-  },
-  submitButton: {
-    marginTop: 30,
-    backgroundColor: "#0051a8",
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  submitButtonText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 18,
-  },
-  iconContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+  bold: {
+    fontWeight: '700',
   },
   picker: {
     flex: 1,
-    backgroundColor: "#fff",
-    borderWidth: 0,
+    backgroundColor: '#fff',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  button: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  submitButton: {
+    backgroundColor: '#007bff',
+  },
+  clearButton: {
+    backgroundColor: '#6c757d',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  statusContainer: {
+    marginTop: 20,
+    padding: 15,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  statusText: {
+    fontSize: 14,
   },
 });
-
