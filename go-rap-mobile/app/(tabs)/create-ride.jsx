@@ -1,468 +1,757 @@
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Picker } from '@react-native-picker/picker';
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
+  View,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-} from 'react-native';
-import { v4 as uuidv4 } from 'uuid';
-import { RideService } from '../../services/ride-service';
-import { locationService } from '../../services/thirdPartyApis';
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
+import { olaService } from '../../services/thirdPartyApis';
 
-export default function CreateRide() {
-  const [startQuery, setStartQuery] = useState('');
-  const [endQuery, setEndQuery] = useState('');
+const CreateRideScreen = () => {
+  const [startQuery, setStartQuery] = useState("");
+  const [endQuery, setEndQuery] = useState("");
   const [startSuggestions, setStartSuggestions] = useState([]);
   const [endSuggestions, setEndSuggestions] = useState([]);
   const [selectedStartLocation, setSelectedStartLocation] = useState(null);
   const [selectedEndLocation, setSelectedEndLocation] = useState(null);
   const [rideDate, setRideDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [rideTime, setRideTime] = useState(new Date());
+  const [availableSeats, setAvailableSeats] = useState("");
+  const [activeInput, setActiveInput] = useState(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [availableSeats, setAvailableSeats] = useState('1');
-  const [status, setStatus] = useState(null);
-  const [activeInput, setActiveInput] = useState(null); 
-  const [isLoading, setIsLoading] = useState(false);
+  
+  // 🗺️ New state for routes
+  const [routes, setRoutes] = useState([]);
+  const [selectedRoute, setSelectedRoute] = useState(null);
+  const [loadingRoutes, setLoadingRoutes] = useState(false);
 
-  const userId = '';
+  // 🔍 Fetch suggestions for Ola Maps
+  const fetchSuggestions = async (query, type) => {
+    if (query.length < 2) {
+      if (type === "start") setStartSuggestions([]);
+      else setEndSuggestions([]);
+      return;
+    }
+    try {
+      const data = await olaService.search(query);
+      console.log("Ola suggestions for", type, data);
+      if (type === "start") setStartSuggestions(data);
+      else setEndSuggestions(data);
+    } catch (err) {
+      console.error("Ola Maps error:", err);
+    }
+  };
 
-  useEffect(() => {
-    const fetchStartLocations = async () => {
-      if (startQuery.length < 2) {
-        setStartSuggestions([]);
-        return;
+  // 🗺️ Fetch routes when both locations are selected
+  const fetchRoutes = async () => {
+    if (!selectedStartLocation?.geometry?.location || !selectedEndLocation?.geometry?.location) {
+      return;
+    }
+
+    setLoadingRoutes(true);
+    setRoutes([]);
+    setSelectedRoute(null);
+    
+    try {
+      const origin = {
+        lat: selectedStartLocation.geometry.location.lat,
+        lng: selectedStartLocation.geometry.location.lng,
+      };
+      const destination = {
+        lat: selectedEndLocation.geometry.location.lat,
+        lng: selectedEndLocation.geometry.location.lng,
+      };
+
+      const routesData = await olaService.getRoute(origin, destination);
+      console.log("📍 Found routes:", routesData.length);
+      setRoutes(routesData);
+      
+      // Auto-select first route
+      if (routesData.length > 0) {
+        setSelectedRoute(0); // Store index instead of object
       }
-      setIsLoading(true);
-      try {
-        const results = await locationService.search(startQuery);
-        setStartSuggestions(results);
-      } catch (error) {
-        console.error('Start location fetch failed:', error);
-        setStartSuggestions([]);
-        Alert.alert('Error', 'Failed to fetch start location suggestions.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    } catch (err) {
+      console.error("Error fetching routes:", err);
+    } finally {
+      setLoadingRoutes(false);
+    }
+  };
 
-    const timeout = setTimeout(fetchStartLocations, 400);
-    return () => clearTimeout(timeout);
-  }, [startQuery]);
-
-  useEffect(() => {
-    const fetchEndLocations = async () => {
-      if (endQuery.length < 2) {
-        setEndSuggestions([]);
-        return;
-      }
-      setIsLoading(true);
-      try {
-        const results = await locationService.search(endQuery);
-        setEndSuggestions(results);
-      } catch (error) {
-        console.error('End location fetch failed:', error);
-        setEndSuggestions([]);
-        Alert.alert('Error', 'Failed to fetch end location suggestions.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const timeout = setTimeout(fetchEndLocations, 400);
-    return () => clearTimeout(timeout);
-  }, [endQuery]);
-
+  // 🏁 Handle selection
   const handleStartSelect = (location) => {
     setSelectedStartLocation(location);
-    setStartQuery(location.display_name);
+    setStartQuery(location.description);
     setStartSuggestions([]);
     setActiveInput(null);
   };
 
-  const handleEndSelect = (location) => {
+  const handleEndSelect = async (location) => {
     setSelectedEndLocation(location);
-    setEndQuery(location.display_name);
+    setEndQuery(location.description);
     setEndSuggestions([]);
     setActiveInput(null);
   };
 
-  const handleClear = () => {
-    setStartQuery('');
-    setEndQuery('');
-    setStartSuggestions([]);
-    setEndSuggestions([]);
-    setSelectedStartLocation(null);
-    setSelectedEndLocation(null);
-    setRideDate(new Date());
-    setRideTime(new Date());
-    setAvailableSeats('1');
-    setStatus(null);
-    setActiveInput(null);
-  };
+  // Fetch routes when both locations are selected
+  useEffect(() => {
+    if (selectedStartLocation && selectedEndLocation) {
+      fetchRoutes();
+    } else {
+      setRoutes([]);
+      setSelectedRoute(null);
+    }
+  }, [selectedStartLocation, selectedEndLocation]);
 
-  const handleSubmit = async () => {
-    if (!selectedStartLocation) {
-      Alert.alert('Error', 'Please select a start location.');
+  // 💾 Handle submit
+  const handleSubmit = () => {
+    if (!selectedStartLocation || !selectedEndLocation) {
+      alert("Please select both start and end locations.");
       return;
     }
-    if (!selectedEndLocation) {
-      Alert.alert('Error', 'Please select an end location.');
-      return;
-    }
-    if (!rideDate) {
-      Alert.alert('Error', 'Please select a ride date.');
-      return;
-    }
-    if (!rideTime) {
-      Alert.alert('Error', 'Please select a ride time.');
+
+    if (!selectedRoute && routes.length > 0) {
+      alert("Please select a route.");
       return;
     }
 
     const rideDTO = {
       id: uuidv4(),
-      startPoint: selectedStartLocation.display_name,
-      startLatitude: parseFloat(selectedStartLocation.lat),
-      startLongitude: parseFloat(selectedStartLocation.lon),
-      destinationPoint: selectedEndLocation.display_name,
-      destinationLatitude: parseFloat(selectedEndLocation.lat),
-      destinationLongitude: parseFloat(selectedEndLocation.lon),
-      rideDate: rideDate.toISOString().split('T')[0],
-      rideTime: `${rideTime.getHours().toString().padStart(2, '0')}:${rideTime.getMinutes().toString().padStart(2, '0')}`,
+      startPoint: selectedStartLocation.description,
+      startLatitude: selectedStartLocation.geometry?.location?.lat,
+      startLongitude: selectedStartLocation.geometry?.location?.lng,
+      destinationPoint: selectedEndLocation.description,
+      destinationLatitude: selectedEndLocation.geometry?.location?.lat,
+      destinationLongitude: selectedEndLocation.geometry?.location?.lng,
+      rideDate: rideDate.toISOString().split("T")[0],
+      rideTime: `${rideTime.getHours().toString().padStart(2, "0")}:${rideTime
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")}`,
       availableSeats: parseInt(availableSeats),
       viaPoints: [],
+      selectedRoute: selectedRoute !== null ? routes[selectedRoute] : null,
     };
 
-    setIsLoading(true);
-    try {
-      const response = await RideService.createRide(userId, rideDTO);
-      setStatus('✅ Ride created successfully');
-      console.log('Response:', response.data);
-      console.log('Payload sent:', rideDTO);
-    } catch (err) {
-      console.error('Error creating ride:', err?.response?.data || err.message);
-      setStatus('❌ Failed to create ride');
-    } finally {
-      setIsLoading(false);
-    }
+    console.log("Ride DTO:", rideDTO);
+    alert("Ride created successfully (check console)");
   };
 
+  // 🎨 Render suggestion items
   const renderSuggestion = ({ item }) => (
     <TouchableOpacity
       style={styles.suggestion}
-      onPress={() => activeInput === 'start' ? handleStartSelect(item) : handleEndSelect(item)}
+      onPress={() =>
+        activeInput === "start"
+          ? handleStartSelect(item)
+          : handleEndSelect(item)
+      }
     >
-      <Text style={styles.suggestionTitle}>
-        {item.display_place || item.address?.name || 'Unknown'}
-      </Text>
+      <Text style={styles.suggestionTitle}>{item.description}</Text>
       <Text style={styles.suggestionSubtitle}>
-        {item.display_address || item.display_name}
+        {item.structured_formatting?.secondary_text || ""}
       </Text>
     </TouchableOpacity>
   );
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={100}
+  // 🗺️ Format duration from seconds
+  const formatDuration = (seconds) => {
+    if (!seconds) return "N/A";
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes} min`;
+  };
+
+  // 🗺️ Format distance from meters
+  const formatDistance = (meters) => {
+    if (!meters) return "N/A";
+    const km = (meters / 1000).toFixed(1);
+    return `${km} km`;
+  };
+
+  // 🗺️ Get route name/type
+  const getRouteName = (route, index) => {
+    if (route.summary && route.summary.trim()) return route.summary;
+    
+    // Try to get name from legs or steps
+    const firstLeg = route.legs?.[0];
+    if (firstLeg?.summary) return firstLeg.summary;
+    
+    // Check if there's a via point or major road
+    const steps = firstLeg?.steps || [];
+    if (steps.length > 0 && steps[0].name) {
+      return `Via ${steps[0].name}`;
+    }
+    
+    return `Route ${index + 1}`;
+  };
+
+  // 🗺️ Get total duration and distance from route
+  const getRouteTotals = (route) => {
+    const legs = route.legs || [];
+    let totalDuration = 0;
+    let totalDistance = 0;
+    
+    legs.forEach(leg => {
+      totalDuration += leg.duration || 0;
+      totalDistance += leg.distance || 0;
+    });
+    
+    return { totalDuration, totalDistance };
+  };
+
+  // 🗺️ Render route card
+  const renderRouteCard = ({ item, index }) => {
+    const isSelected = selectedRoute === index;
+    const { totalDuration, totalDistance } = getRouteTotals(item);
+    const steps = item.legs?.[0]?.steps || [];
+    const routeName = getRouteName(item, index);
+    
+    // Extract warnings or travel advisory
+    const warnings = item.warnings || [];
+    const advisory = item.travel_advisory;
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.routeCard,
+          isSelected && styles.routeCardSelected,
+        ]}
+        onPress={() => setSelectedRoute(index)}
+        activeOpacity={0.7}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.header}>Create New Ride</Text>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Start Location *</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Search start point"
-                value={startQuery}
-                onChangeText={(text) => {
-                  setStartQuery(text);
-                  setActiveInput('start');
-                }}
-                onFocus={() => setActiveInput('start')}
-              />
-            </View>
-            {activeInput === 'start' && startSuggestions.length > 0 && (
-              <FlatList
-                data={startSuggestions}
-                renderItem={renderSuggestion}
-                keyExtractor={(item, index) => index.toString()}
-                style={styles.suggestionList}
-                keyboardShouldPersistTaps="handled"
-              />
-            )}
-            {selectedStartLocation && (
-              <View style={styles.selectedLocation}>
-                <Text style={styles.selectedText}>
-                  <Text style={styles.bold}>Selected Start: </Text>
-                  {selectedStartLocation.display_name}
-                </Text>
-                <Text style={styles.selectedSubText}>
-                  Lat: {selectedStartLocation.lat}, Lon: {selectedStartLocation.lon}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>End Location *</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Search destination"
-                value={endQuery}
-                onChangeText={(text) => {
-                  setEndQuery(text);
-                  setActiveInput('end');
-                }}
-                onFocus={() => setActiveInput('end')}
-              />
-            </View>
-            {activeInput === 'end' && endSuggestions.length > 0 && (
-              <FlatList
-                data={endSuggestions}
-                renderItem={renderSuggestion}
-                keyExtractor={(item, index) => index.toString()}
-                style={styles.suggestionList}
-                keyboardShouldPersistTaps="handled"
-              />
-            )}
-            {selectedEndLocation && (
-              <View style={styles.selectedLocation}>
-                <Text style={styles.selectedText}>
-                  <Text style={styles.bold}>Selected Destination: </Text>
-                  {selectedEndLocation.display_name}
-                </Text>
-                <Text style={styles.selectedSubText}>
-                  Lat: {selectedEndLocation.lat}, Lon: {selectedEndLocation.lon}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Ride Date *</Text>
-            <TouchableOpacity
-              style={styles.inputContainer}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text style={styles.input}>
-                {rideDate.toISOString().split('T')[0]}
+        {/* Route Header */}
+        <View style={styles.routeHeader}>
+          <View style={styles.routeHeaderLeft}>
+            <View style={[styles.routeNumber, isSelected && styles.routeNumberSelected]}>
+              <Text style={[styles.routeNumberText, isSelected && styles.routeNumberTextSelected]}>
+                {index + 1}
               </Text>
-            </TouchableOpacity>
-            {showDatePicker && (
-              <DateTimePicker
-                value={rideDate}
-                mode="date"
-                minimumDate={new Date()}
-                onChange={(event, selectedDate) => {
-                  setShowDatePicker(false);
-                  if (selectedDate) setRideDate(selectedDate);
-                }}
-              />
-            )}
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Ride Time *</Text>
-            <TouchableOpacity
-              style={styles.inputContainer}
-              onPress={() => setShowTimePicker(true)}
-            >
-              <Text style={styles.input}>
-                {`${rideTime.getHours().toString().padStart(2, '0')}:${rideTime.getMinutes().toString().padStart(2, '0')}`}
-              </Text>
-            </TouchableOpacity>
-            {showTimePicker && (
-              <DateTimePicker
-                value={rideTime}
-                mode="time"
-                onChange={(event, selectedTime) => {
-                  setShowTimePicker(false);
-                  if (selectedTime) setRideTime(selectedTime);
-                }}
-              />
-            )}
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Available Seats *</Text>
-            <View style={styles.inputContainer}>
-              <Picker
-                selectedValue={availableSeats}
-                onValueChange={(itemValue) => setAvailableSeats(itemValue)}
-                style={styles.picker}
-              >
-                {[...Array(8).keys()].map((i) => (
-                  <Picker.Item key={i + 1} label={`${i + 1}`} value={`${i + 1}`} />
-                ))}
-              </Picker>
             </View>
+            <Text style={styles.routeName} numberOfLines={1}>
+              {routeName}
+            </Text>
           </View>
-
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.submitButton]}
-              onPress={handleSubmit}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Create Ride</Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.clearButton]}
-              onPress={handleClear}
-              disabled={isLoading}
-            >
-              <Text style={styles.buttonText}>Clear All</Text>
-            </TouchableOpacity>
-          </View>
-
-          {status && (
-            <View style={[
-              styles.statusContainer,
-              { backgroundColor: status.includes('✅') ? '#d4edda' : '#f8d7da' },
-            ]}>
-              <Text style={[
-                styles.statusText,
-                { color: status.includes('✅') ? '#155724' : '#721c24' },
-              ]}>
-                <Text style={styles.bold}>Status: </Text>
-                {status}
-              </Text>
+          {isSelected && (
+            <View style={styles.selectedBadge}>
+              <Text style={styles.selectedBadgeText}>✓</Text>
             </View>
           )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </View>
+
+        {/* Route Stats */}
+        <View style={styles.routeStats}>
+          <View style={styles.statBox}>
+            <Text style={styles.statIcon}>⏱️</Text>
+            <Text style={styles.statValue}>{formatDuration(totalDuration)}</Text>
+            <Text style={styles.statLabel}>Duration</Text>
+          </View>
+
+          <View style={styles.statDivider} />
+
+          <View style={styles.statBox}>
+            <Text style={styles.statIcon}>📏</Text>
+            <Text style={styles.statValue}>{formatDistance(totalDistance)}</Text>
+            <Text style={styles.statLabel}>Distance</Text>
+          </View>
+
+          <View style={styles.statDivider} />
+
+          <View style={styles.statBox}>
+            <Text style={styles.statIcon}>🛣️</Text>
+            <Text style={styles.statValue}>{steps.length || 0}</Text>
+            <Text style={styles.statLabel}>Steps</Text>
+          </View>
+        </View>
+
+        {/* Route Details - Show key via points */}
+        {steps.length > 0 && (
+          <View style={styles.routeViaPoints}>
+            <Text style={styles.viaPointsTitle}>🗺️ Route Details:</Text>
+            <Text style={styles.viaPointsText} numberOfLines={2}>
+              {steps.slice(0, 3).map((step, idx) => {
+                const instruction = step.maneuver?.instruction || step.name || step.html_instructions;
+                // Clean HTML tags if present
+                return instruction ? instruction.replace(/<[^>]*>/g, '') : null;
+              }).filter(Boolean).join(" → ")}
+              {steps.length > 3 ? ` (+${steps.length - 3} more)` : ""}
+            </Text>
+          </View>
+        )}
+
+        {/* Warnings */}
+        {warnings.length > 0 && (
+          <View style={styles.warningBox}>
+            <Text style={styles.warningIcon}>⚠️</Text>
+            <Text style={styles.warningText} numberOfLines={2}>
+              {warnings[0]}
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>🚗 Create a Ride</Text>
+
+      {/* Start Location */}
+      <Text style={styles.label}>📍 Start Location</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Enter starting point"
+        value={startQuery}
+        onChangeText={(text) => {
+          setStartQuery(text);
+          setActiveInput("start");
+          fetchSuggestions(text, "start");
+        }}
+      />
+      {activeInput === "start" && startSuggestions.length > 0 && (
+        <FlatList
+          data={startSuggestions}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={renderSuggestion}
+          style={styles.suggestionList}
+        />
+      )}
+
+      {/* Selected Start */}
+      {selectedStartLocation && (
+        <View style={styles.selectedLocation}>
+          <Text style={styles.selectedText}>
+            <Text style={styles.bold}>✓ Selected: </Text>
+            {selectedStartLocation.description}
+          </Text>
+        </View>
+      )}
+
+      {/* End Location */}
+      <Text style={styles.label}>🏁 Destination</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Enter destination"
+        value={endQuery}
+        onChangeText={(text) => {
+          setEndQuery(text);
+          setActiveInput("end");
+          fetchSuggestions(text, "end");
+        }}
+      />
+      {activeInput === "end" && endSuggestions.length > 0 && (
+        <FlatList
+          data={endSuggestions}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={renderSuggestion}
+          style={styles.suggestionList}
+        />
+      )}
+
+      {/* Selected Destination */}
+      {selectedEndLocation && (
+        <View style={styles.selectedLocation}>
+          <Text style={styles.selectedText}>
+            <Text style={styles.bold}>✓ Selected: </Text>
+            {selectedEndLocation.description}
+          </Text>
+        </View>
+      )}
+
+      {/* 🗺️ Routes Section */}
+      {selectedStartLocation && selectedEndLocation && (
+        <View style={styles.routesSection}>
+          <View style={styles.routesSectionHeader}>
+            <Text style={styles.routesSectionTitle}>🗺️ Choose Your Route</Text>
+            {routes.length > 0 && (
+              <Text style={styles.routesCount}>{routes.length} route{routes.length > 1 ? 's' : ''} found</Text>
+            )}
+          </View>
+          
+          {loadingRoutes ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#007bff" />
+              <Text style={styles.loadingText}>Finding best routes...</Text>
+            </View>
+          ) : routes.length > 0 ? (
+            <FlatList
+              data={routes}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={renderRouteCard}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.routesList}
+            />
+          ) : (
+            <View style={styles.noRoutesContainer}>
+              <Text style={styles.noRoutesIcon}>🚫</Text>
+              <Text style={styles.noRoutesText}>No routes available</Text>
+              <Text style={styles.noRoutesSubtext}>Try selecting different locations</Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Date & Time */}
+      <Text style={styles.label}>📅 Ride Date</Text>
+      <TouchableOpacity
+        style={styles.input}
+        onPress={() => setShowDatePicker(true)}
+      >
+        <Text>{rideDate.toDateString()}</Text>
+      </TouchableOpacity>
+      {showDatePicker && (
+        <DateTimePicker
+          value={rideDate}
+          mode="date"
+          display="default"
+          onChange={(event, date) => {
+            setShowDatePicker(false);
+            if (date) setRideDate(date);
+          }}
+        />
+      )}
+
+      <Text style={styles.label}>🕐 Ride Time</Text>
+      <TouchableOpacity
+        style={styles.input}
+        onPress={() => setShowTimePicker(true)}
+      >
+        <Text>
+          {rideTime.getHours().toString().padStart(2, "0")}:
+          {rideTime.getMinutes().toString().padStart(2, "0")}
+        </Text>
+      </TouchableOpacity>
+      {showTimePicker && (
+        <DateTimePicker
+          value={rideTime}
+          mode="time"
+          display="default"
+          onChange={(event, time) => {
+            setShowTimePicker(false);
+            if (time) setRideTime(time);
+          }}
+        />
+      )}
+
+      {/* Seats */}
+      <Text style={styles.label}>💺 Available Seats</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Enter available seats"
+        keyboardType="numeric"
+        value={availableSeats}
+        onChangeText={setAvailableSeats}
+      />
+
+      {/* Submit */}
+      <TouchableOpacity 
+        style={[styles.submitButton, (!selectedRoute && routes.length > 0) && styles.submitButtonDisabled]} 
+        onPress={handleSubmit}
+      >
+        <Text style={styles.submitText}>
+          {(!selectedRoute && routes.length > 0) ? "⚠️ Select a Route First" : "✅ Create Ride"}
+        </Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
-}
+};
+
+export default CreateRideScreen;
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  scrollContent: {
     padding: 20,
+    backgroundColor: "#f8f9fa",
   },
-  header: {
+  title: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#333',
+    fontWeight: "bold",
     marginBottom: 20,
-    textAlign: 'center',
-  },
-  section: {
-    marginBottom: 20,
+    textAlign: "center",
+    color: "#1a1a1a",
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#555',
+    fontWeight: "600",
+    marginTop: 15,
     marginBottom: 8,
-  },
-  inputContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    padding: 12,
+    fontSize: 15,
+    color: "#333",
   },
   input: {
-    fontSize: 16,
-    color: '#333',
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: "#fff",
+    fontSize: 15,
   },
   suggestionList: {
-    maxHeight: 200,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    maxHeight: 150,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    marginTop: 8,
+    borderColor: "#e0e0e0",
+    borderRadius: 10,
+    backgroundColor: "#fff",
+    marginTop: 5,
+    marginBottom: 10,
   },
   suggestion: {
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#f0f0f0",
   },
   suggestionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "500",
+    fontSize: 14,
+    color: "#1a1a1a",
   },
   suggestionSubtitle: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
+    marginTop: 2,
   },
   selectedLocation: {
-    marginTop: 10,
+    backgroundColor: "#e8f5e9",
     padding: 12,
-    backgroundColor: '#d4edda',
-    borderRadius: 8,
+    borderRadius: 10,
+    marginTop: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: "#4caf50",
   },
   selectedText: {
     fontSize: 14,
-    color: '#155724',
-  },
-  selectedSubText: {
-    fontSize: 12,
-    color: '#155724',
+    color: "#2e7d32",
   },
   bold: {
-    fontWeight: '700',
+    fontWeight: "700",
   },
-  picker: {
-    flex: 1,
-    backgroundColor: '#fff',
+  // 🗺️ Routes Section Styles
+  routesSection: {
+    marginTop: 25,
+    marginBottom: 15,
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
+  routesSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
   },
-  button: {
-    flex: 1,
-    paddingVertical: 14,
+  routesSectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1a1a1a",
+  },
+  routesCount: {
+    fontSize: 13,
+    color: "#666",
+    backgroundColor: "#e3f2fd",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 12,
-    alignItems: 'center',
-    marginHorizontal: 5,
+    fontWeight: "600",
+  },
+  loadingContainer: {
+    alignItems: "center",
+    padding: 40,
+    backgroundColor: "#fff",
+    borderRadius: 15,
+  },
+  loadingText: {
+    marginTop: 12,
+    color: "#666",
+    fontSize: 14,
+  },
+  routesList: {
+    paddingRight: 20,
+  },
+  routeCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    marginRight: 15,
+    width: 300,
+    borderWidth: 2,
+    borderColor: "#e0e0e0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  routeCardSelected: {
+    borderColor: "#007bff",
+    backgroundColor: "#f0f8ff",
+    transform: [{ scale: 1.02 }],
+  },
+  routeHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  routeHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  routeNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  routeNumberSelected: {
+    backgroundColor: "#007bff",
+  },
+  routeNumberText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#666",
+  },
+  routeNumberTextSelected: {
+    color: "#fff",
+  },
+  routeName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#1a1a1a",
+    flex: 1,
+  },
+  selectedBadge: {
+    backgroundColor: "#4caf50",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  selectedBadgeText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  routeStats: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    backgroundColor: "#fafafa",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  statBox: {
+    alignItems: "center",
+    flex: 1,
+  },
+  statIcon: {
+    fontSize: 20,
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#1a1a1a",
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: "#888",
+    textTransform: "uppercase",
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: "#ddd",
+    marginHorizontal: 8,
+  },
+  routeViaPoints: {
+    backgroundColor: "#f5f5f5",
+    padding: 10,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: "#ff9800",
+  },
+  viaPointsTitle: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#ff6f00",
+    marginBottom: 4,
+    textTransform: "uppercase",
+  },
+  viaPointsText: {
+    fontSize: 12,
+    color: "#555",
+    lineHeight: 18,
+  },
+  warningBox: {
+    backgroundColor: "#fff3cd",
+    padding: 8,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: "#ffc107",
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  warningIcon: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  warningText: {
+    fontSize: 11,
+    color: "#856404",
+    flex: 1,
+  },
+  noRoutesContainer: {
+    padding: 40,
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 15,
+  },
+  noRoutesIcon: {
+    fontSize: 48,
+    marginBottom: 10,
+  },
+  noRoutesText: {
+    color: "#999",
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 5,
+  },
+  noRoutesSubtext: {
+    color: "#bbb",
+    fontSize: 13,
   },
   submitButton: {
-    backgroundColor: '#007bff',
+    backgroundColor: "#007bff",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 25,
+    marginBottom: 20,
+    shadowColor: "#007bff",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  clearButton: {
-    backgroundColor: '#6c757d',
+  submitButtonDisabled: {
+    backgroundColor: "#ff9800",
   },
-  buttonText: {
-    color: '#fff',
+  submitText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "700",
     fontSize: 16,
-    fontWeight: '700',
-  },
-  statusContainer: {
-    marginTop: 20,
-    padding: 15,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  statusText: {
-    fontSize: 14,
   },
 });
