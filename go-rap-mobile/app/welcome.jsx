@@ -15,7 +15,6 @@ const Welcome = () => {
         const fetchToken = async () => {
             try {
                 const token = await AsyncStorage.getItem("token");
-                console.log('got the token from asyncstorage', token);
 
                 if (token) {
                     HelperService.setToken(token);

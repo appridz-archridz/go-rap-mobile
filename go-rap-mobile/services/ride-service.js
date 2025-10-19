@@ -1,13 +1,12 @@
 import api from "./interceptor-service";
 
-const RIDE_BASE_URL = "http://192.168.0.115:8077/gorap/rides"; // adjust if needed
+const RIDE_BASE_URL = "http://192.168.29.72:8077/gorap/api/ride";
 
 export const RideService = {
   createRide: (userId, rideDTO) => {
     return api.post(`${RIDE_BASE_URL}/create/${userId}`, rideDTO);
   },
 };
-
 
 export const getLocations = async () => {
   // simulate api call

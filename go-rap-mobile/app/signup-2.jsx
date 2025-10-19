@@ -1,3 +1,4 @@
+import * as Device from "expo-device";
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -31,7 +32,6 @@ const SignUp2 = () => {
 
   const customStyles = { bgColor: '#2094F3', color: '#fff' };
 
-  // 🔄 Validate single field live
   const validateField = (field, value) => {
     let message = '';
 
@@ -52,7 +52,6 @@ const SignUp2 = () => {
     setErrors((prev) => ({ ...prev, [field]: message }));
   };
 
-  // 🔄 Validate whole form on submit
   const validate = () => {
     const fieldsToValidate = {
       profilePic,
@@ -76,7 +75,26 @@ const SignUp2 = () => {
     return allValid;
   };
 
+  const getDeviceInfo = () => {
+    const deviceInfo = {
+      brand: Device.brand,
+      manufacturer: Device.manufacturer,
+      modelName: Device.modelName,
+      modelId: Device.modelId,
+      osName: Device.osName,
+      osVersion: Device.osVersion,
+      deviceName: Device.deviceName,
+      designName: Device.designName,
+      productName: Device.productName,
+      deviceType: Device.deviceType,
+      isDevice: Device.isDevice,
+    };
+    return deviceInfo;
+  };
+
   const handleSubmit = async () => {
+    console.log('handle submit');
+    
     if (validate()) {
       const payload = {
         userName: fullName,
@@ -84,7 +102,8 @@ const SignUp2 = () => {
         password,
         phoneNumber: phone,
         address: '',
-        role: 'USER'
+        role: 'USER',
+        deviceName: getDeviceInfo().modelName,
       };
 
       const response = await signUp(payload);
