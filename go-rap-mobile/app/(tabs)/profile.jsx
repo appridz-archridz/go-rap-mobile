@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -11,6 +12,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useDispatch } from 'react-redux';
+import { logout } from "../../redux/authSlice";
+import { HelperService } from '../../services/helper-service';
 
 export default function ProfileScreen() {
   const [user, setUser] = useState({
@@ -21,22 +25,29 @@ export default function ProfileScreen() {
     ridesJoined: 8,
     rating: 4.8,
   });
+  const dispatch = useDispatch();
 
   const handleEditProfile = () => {
     Alert.alert('Edit Profile', 'This feature will be implemented soon!');
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: () => {
-          Alert.alert('Logged out successfully');
-        }},
-      ]
-    );
+    dispatch(logout());
+    AsyncStorage.removeItem('token');
+    HelperService.removeToken();
+    router.replace("/login");
+    // Alert.alert(
+    //   'Logout',
+    //   'Are you sure you want to logout?',
+    //   [
+    //     { text: 'Cancel', style: 'cancel' },
+    //     {
+    //       text: 'Logout', style: 'destructive', onPress: () => {
+
+    //       }
+    //     },
+    //   ]
+    // );
   };
 
   const menuItems = [
@@ -45,7 +56,7 @@ export default function ProfileScreen() {
       title: 'My Rides',
       subtitle: 'View your created and joined rides',
       icon: 'car-outline',
-      onPress: () =>router.push("/my-ride"),
+      onPress: () => router.push("/my-ride"),
     },
     {
       id: 2,
@@ -72,10 +83,10 @@ export default function ProfileScreen() {
               <Ionicons name="camera" size={16} color="white" />
             </TouchableOpacity>
           </View>
-          
+
           <Text style={styles.userName}>{user.name}</Text>
           <Text style={styles.userEmail}>{user.email}</Text>
-          
+
           <TouchableOpacity style={styles.editProfileButton} onPress={handleEditProfile}>
             <Ionicons name="create-outline" size={20} color="#007AFF" />
             <Text style={styles.editProfileText}>Edit Profile</Text>

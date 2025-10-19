@@ -1,4 +1,5 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { FontAwesome } from "@expo/vector-icons";
+import * as Device from "expo-device";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -15,13 +16,10 @@ import {
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import PressableButton from "../components/PressableButton";
-import { AuthService } from "../components/services/authService";
 import { inputField } from "../global-css";
-import { login } from "../redux/authSlice";
 
 const eyeOpen = require("../assets/images/eye-open.png");
 const eyeClosed = require("../assets/images/eye-closed.png");
-const locationIcon = require("../assets/images/location.png");
 const googleIcon = require("../assets/images/google.png");
 
 const Login = () => {
@@ -33,9 +31,7 @@ const Login = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      console.log("user is authenticated so skipping login page", email);
-      
-      router.replace("/create-ride");
+      router.replace("/search-ride");
     }
   }, [isAuthenticated])
 
@@ -54,6 +50,26 @@ const Login = () => {
 
     setErrors((prev) => ({ ...prev, [field]: message }));
   };
+
+  const getDeviceInfo = () => {
+    const deviceInfo = {
+      brand: Device.brand,
+      manufacturer: Device.manufacturer,
+      modelName: Device.modelName,
+      modelId: Device.modelId,
+      osName: Device.osName,
+      osVersion: Device.osVersion,
+      deviceName: Device.deviceName,
+      designName: Device.designName,
+      productName: Device.productName,
+      deviceType: Device.deviceType,
+      isDevice: Device.isDevice,
+    };
+
+    console.log("Device Info:", deviceInfo);
+    return deviceInfo;
+  };
+
 
   const validate = () => {
     let allValid = true;
@@ -84,7 +100,8 @@ const Login = () => {
           token: token,
           userName: data.data.userName,
           email: data.data.email,
-          phone: data.data.phoneNumber
+          phone: data.data.phoneNumber,
+          deviceName: getDeviceInfo().modelName,
         }
         await AsyncStorage.setItem("token", token);
         dispatch(login(stateData));
@@ -120,7 +137,8 @@ const Login = () => {
         >
           {/* Logo */}
           <View style={styles.logoContainer}>
-            <Image source={locationIcon} style={styles.logo} resizeMode="contain" />
+            {/* <Image source={locationIcon} style={styles.logo} resizeMode="contain" /> */}
+            <FontAwesome name='motorcycle' size={100} color="#007AFF" />
             <Text style={styles.appName}>Go-Rap</Text>
           </View>
 

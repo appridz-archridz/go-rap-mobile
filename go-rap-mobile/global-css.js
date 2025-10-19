@@ -7,6 +7,7 @@ export const inputField = {
   fontSize: 16,
   paddingVertical: 8,
   paddingHorizontal: 16,
+  paddingRight: 32,
 };
 
 export const defaultButton = {
@@ -24,4 +25,14 @@ export const defaultButton = {
   alignItems: "center",
   flexDirection: "row",
   gap: 5,
+};
+
+export const clearButton = {
+  position: "absolute",
+  right: 10,
+  top: 15,
+};
+
+export const inputWithCross = {
+  position: 'relative'
 };

@@ -15,18 +15,17 @@ const authSlice = createSlice({
     login: (state, action) => {
       state.isAuthenticated = true;
       state.token = action.payload.token;
-      state.userName = action.payload.userName,
-      state.email = action.payload.email,
-      state.phone = action.payload.phone
+      state.userName = action.payload.userName;
+      state.email = action.payload.email;
+      state.phone = action.payload.phone;
     },
-      logout: (state) => {
+    logout: (state) => {
+      console.log('logout from authslice');
       state.isAuthenticated = false;
       state.token = null;
-      state.userDetails = {
-        username: null,
-        email: null,
-        phone: null,
-      };
+      state.userName = null;
+      state.email = null;
+      state.phone = null;
     },
   },
 });

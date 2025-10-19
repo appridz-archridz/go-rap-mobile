@@ -1,468 +1,323 @@
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Picker } from '@react-native-picker/picker';
-import { useEffect, useState } from 'react';
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
+  Keyboard,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-} from 'react-native';
-import { v4 as uuidv4 } from 'uuid';
-import { RideService } from '../../services/ride-service';
-import { locationService } from '../../services/thirdPartyApis';
+  TouchableWithoutFeedback
+} from "react-native";
+import { v4 as uuidv4 } from "uuid";
+import { inputField } from "../../global-css";
+import { olaService } from "../../services/thirdPartyApis";
 
-export default function CreateRide() {
-  const [startQuery, setStartQuery] = useState('');
-  const [endQuery, setEndQuery] = useState('');
+export default function CreateRideScreen() {
+  const [startQuery, setStartQuery] = useState("");
+  const [endQuery, setEndQuery] = useState("");
   const [startSuggestions, setStartSuggestions] = useState([]);
   const [endSuggestions, setEndSuggestions] = useState([]);
-  const [selectedStartLocation, setSelectedStartLocation] = useState(null);
-  const [selectedEndLocation, setSelectedEndLocation] = useState(null);
+  const [selectedStart, setSelectedStart] = useState(null);
+  const [selectedEnd, setSelectedEnd] = useState(null);
+
   const [rideDate, setRideDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [rideTime, setRideTime] = useState(new Date());
+  const [availableSeats, setAvailableSeats] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [availableSeats, setAvailableSeats] = useState('1');
-  const [status, setStatus] = useState(null);
-  const [activeInput, setActiveInput] = useState(null); 
-  const [isLoading, setIsLoading] = useState(false);
+  const [loadingRoutes, setLoadingRoutes] = useState(false);
+  const [routes, setRoutes] = useState([]);
+  const [selectedRoute, setSelectedRoute] = useState(null);
 
-  const userId = '';
+  // debounce refs
+  const startDebounceRef = useRef(null);
+  const endDebounceRef = useRef(null);
 
-  useEffect(() => {
-    const fetchStartLocations = async () => {
-      if (startQuery.length < 2) {
-        setStartSuggestions([]);
-        return;
-      }
-      setIsLoading(true);
-      try {
-        const results = await locationService.search(startQuery);
+  // 🔍 Fetch location suggestions with debounce
+  const handleStartChange = (text) => {
+    setStartQuery(text);
+    if (startDebounceRef.current) clearTimeout(startDebounceRef.current);
+    startDebounceRef.current = setTimeout(async () => {
+      if (text.length > 1) {
+        const results = await olaService.search(text);
         setStartSuggestions(results);
-      } catch (error) {
-        console.error('Start location fetch failed:', error);
+      } else {
         setStartSuggestions([]);
-        Alert.alert('Error', 'Failed to fetch start location suggestions.');
-      } finally {
-        setIsLoading(false);
       }
-    };
+    }, 300);
+  };
 
-    const timeout = setTimeout(fetchStartLocations, 400);
-    return () => clearTimeout(timeout);
-  }, [startQuery]);
+  const handleEndChange = (text) => {
+    setEndQuery(text);
+    if (endDebounceRef.current) clearTimeout(endDebounceRef.current);
+    endDebounceRef.current = setTimeout(async () => {
+      if (text.length > 1) {
+        const results = await olaService.search(text);
+        setEndSuggestions(results);
+      } else {
+        setEndSuggestions([]);
+      }
+    }, 300);
+  };
+
+  // 🗺️ Fetch routes when both points are chosen
+  const fetchRoutes = async () => {
+    if (!selectedStart?.geometry || !selectedEnd?.geometry) return;
+    try {
+      setLoadingRoutes(true);
+      setRoutes([]);
+      const origin = selectedStart.geometry.location;
+      const destination = selectedEnd.geometry.location;
+      const routesData = await olaService.getRoute(origin, destination);
+      setRoutes(routesData);
+      if (routesData.length > 0) setSelectedRoute(0);
+    } catch (err) {
+      console.error("Error fetching routes:", err);
+    } finally {
+      setLoadingRoutes(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchEndLocations = async () => {
-      if (endQuery.length < 2) {
-        setEndSuggestions([]);
-        return;
-      }
-      setIsLoading(true);
-      try {
-        const results = await locationService.search(endQuery);
-        setEndSuggestions(results);
-      } catch (error) {
-        console.error('End location fetch failed:', error);
-        setEndSuggestions([]);
-        Alert.alert('Error', 'Failed to fetch end location suggestions.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const timeout = setTimeout(fetchEndLocations, 400);
-    return () => clearTimeout(timeout);
-  }, [endQuery]);
-
-  const handleStartSelect = (location) => {
-    setSelectedStartLocation(location);
-    setStartQuery(location.display_name);
-    setStartSuggestions([]);
-    setActiveInput(null);
-  };
-
-  const handleEndSelect = (location) => {
-    setSelectedEndLocation(location);
-    setEndQuery(location.display_name);
-    setEndSuggestions([]);
-    setActiveInput(null);
-  };
-
-  const handleClear = () => {
-    setStartQuery('');
-    setEndQuery('');
-    setStartSuggestions([]);
-    setEndSuggestions([]);
-    setSelectedStartLocation(null);
-    setSelectedEndLocation(null);
-    setRideDate(new Date());
-    setRideTime(new Date());
-    setAvailableSeats('1');
-    setStatus(null);
-    setActiveInput(null);
-  };
-
-  const handleSubmit = async () => {
-    if (!selectedStartLocation) {
-      Alert.alert('Error', 'Please select a start location.');
-      return;
+    if (selectedStart && selectedEnd) {
+      fetchRoutes();
+    } else {
+      setRoutes([]);
     }
-    if (!selectedEndLocation) {
-      Alert.alert('Error', 'Please select an end location.');
-      return;
-    }
-    if (!rideDate) {
-      Alert.alert('Error', 'Please select a ride date.');
-      return;
-    }
-    if (!rideTime) {
-      Alert.alert('Error', 'Please select a ride time.');
+  }, [selectedStart, selectedEnd]);
+
+  const handleSubmit = () => {
+    if (!selectedStart || !selectedEnd) {
+      Alert.alert("Missing fields", "Please select both start and destination.");
       return;
     }
 
     const rideDTO = {
       id: uuidv4(),
-      startPoint: selectedStartLocation.display_name,
-      startLatitude: parseFloat(selectedStartLocation.lat),
-      startLongitude: parseFloat(selectedStartLocation.lon),
-      destinationPoint: selectedEndLocation.display_name,
-      destinationLatitude: parseFloat(selectedEndLocation.lat),
-      destinationLongitude: parseFloat(selectedEndLocation.lon),
-      rideDate: rideDate.toISOString().split('T')[0],
-      rideTime: `${rideTime.getHours().toString().padStart(2, '0')}:${rideTime.getMinutes().toString().padStart(2, '0')}`,
+      startPoint: selectedStart.description,
+      endPoint: selectedEnd.description,
+      startLat: selectedStart.geometry.location.lat,
+      startLng: selectedStart.geometry.location.lng,
+      endLat: selectedEnd.geometry.location.lat,
+      endLng: selectedEnd.geometry.location.lng,
+      rideDate: rideDate.toISOString().split("T")[0],
+      rideTime: `${rideTime.getHours().toString().padStart(2, "0")}:${rideTime
+        .getMinutes()
+        .toString()
+        .padStart(2, "0")}`,
       availableSeats: parseInt(availableSeats),
-      viaPoints: [],
+      selectedRoute: routes[selectedRoute] || null,
     };
 
-    setIsLoading(true);
-    try {
-      const response = await RideService.createRide(userId, rideDTO);
-      setStatus('✅ Ride created successfully');
-      console.log('Response:', response.data);
-      console.log('Payload sent:', rideDTO);
-    } catch (err) {
-      console.error('Error creating ride:', err?.response?.data || err.message);
-      setStatus('❌ Failed to create ride');
-    } finally {
-      setIsLoading(false);
-    }
+    console.log("✅ Ride DTO:", rideDTO);
+    Alert.alert("Ride Created", "Ride created successfully! Check console.");
   };
 
   const renderSuggestion = ({ item }) => (
     <TouchableOpacity
-      style={styles.suggestion}
-      onPress={() => activeInput === 'start' ? handleStartSelect(item) : handleEndSelect(item)}
+      style={styles.dropdownItem}
+      onPress={() => {
+        if (startSuggestions.includes(item)) {
+          setSelectedStart(item);
+          setStartQuery(item.description);
+          setStartSuggestions([]);
+        } else {
+          setSelectedEnd(item);
+          setEndQuery(item.description);
+          setEndSuggestions([]);
+        }
+      }}
     >
-      <Text style={styles.suggestionTitle}>
-        {item.display_place || item.address?.name || 'Unknown'}
-      </Text>
-      <Text style={styles.suggestionSubtitle}>
-        {item.display_address || item.display_name}
-      </Text>
+      <Text>{item.description}</Text>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={100}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.header}>Create New Ride</Text>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <ScrollView style={styles.container}>
+        <Text style={styles.title}>Create a Ride</Text>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Start Location *</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Search start point"
-                value={startQuery}
-                onChangeText={(text) => {
-                  setStartQuery(text);
-                  setActiveInput('start');
-                }}
-                onFocus={() => setActiveInput('start')}
-              />
-            </View>
-            {activeInput === 'start' && startSuggestions.length > 0 && (
-              <FlatList
-                data={startSuggestions}
-                renderItem={renderSuggestion}
-                keyExtractor={(item, index) => index.toString()}
-                style={styles.suggestionList}
-                keyboardShouldPersistTaps="handled"
-              />
-            )}
-            {selectedStartLocation && (
-              <View style={styles.selectedLocation}>
-                <Text style={styles.selectedText}>
-                  <Text style={styles.bold}>Selected Start: </Text>
-                  {selectedStartLocation.display_name}
-                </Text>
-                <Text style={styles.selectedSubText}>
-                  Lat: {selectedStartLocation.lat}, Lon: {selectedStartLocation.lon}
-                </Text>
-              </View>
-            )}
-          </View>
+        {/* From */}
+        <Text style={styles.label}>From</Text>
+        <TextInput
+          style={inputField}
+          placeholder="Search Pickup Location"
+          value={startQuery}
+          onChangeText={handleStartChange}
+        />
+        {startSuggestions.length > 0 && (
+          <FlatList
+            data={startSuggestions}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={renderSuggestion}
+            style={styles.dropdown}
+          />
+        )}
 
-          <View style={styles.section}>
-            <Text style={styles.label}>End Location *</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Search destination"
-                value={endQuery}
-                onChangeText={(text) => {
-                  setEndQuery(text);
-                  setActiveInput('end');
-                }}
-                onFocus={() => setActiveInput('end')}
-              />
-            </View>
-            {activeInput === 'end' && endSuggestions.length > 0 && (
-              <FlatList
-                data={endSuggestions}
-                renderItem={renderSuggestion}
-                keyExtractor={(item, index) => index.toString()}
-                style={styles.suggestionList}
-                keyboardShouldPersistTaps="handled"
-              />
-            )}
-            {selectedEndLocation && (
-              <View style={styles.selectedLocation}>
-                <Text style={styles.selectedText}>
-                  <Text style={styles.bold}>Selected Destination: </Text>
-                  {selectedEndLocation.display_name}
-                </Text>
-                <Text style={styles.selectedSubText}>
-                  Lat: {selectedEndLocation.lat}, Lon: {selectedEndLocation.lon}
-                </Text>
-              </View>
-            )}
-          </View>
+        {/* To */}
+        <Text style={styles.label}>To</Text>
+        <TextInput
+          style={inputField}
+          placeholder="Search Drop Location"
+          value={endQuery}
+          onChangeText={handleEndChange}
+        />
+        {endSuggestions.length > 0 && (
+          <FlatList
+            data={endSuggestions}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={renderSuggestion}
+            style={styles.dropdown}
+          />
+        )}
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Ride Date *</Text>
-            <TouchableOpacity
-              style={styles.inputContainer}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text style={styles.input}>
-                {rideDate.toISOString().split('T')[0]}
-              </Text>
-            </TouchableOpacity>
-            {showDatePicker && (
-              <DateTimePicker
-                value={rideDate}
-                mode="date"
-                minimumDate={new Date()}
-                onChange={(event, selectedDate) => {
-                  setShowDatePicker(false);
-                  if (selectedDate) setRideDate(selectedDate);
-                }}
-              />
-            )}
-          </View>
+        {/* Date */}
+        <Text style={styles.label}>Ride Date</Text>
+        <TouchableOpacity
+          style={inputField}
+          onPress={() => setShowDatePicker(true)}
+        >
+          <Text>{rideDate.toDateString()}</Text>
+        </TouchableOpacity>
+        {showDatePicker && (
+          <DateTimePicker
+            value={rideDate}
+            mode="date"
+            display="default"
+            onChange={(event, date) => {
+              setShowDatePicker(false);
+              if (date) setRideDate(date);
+            }}
+          />
+        )}
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Ride Time *</Text>
-            <TouchableOpacity
-              style={styles.inputContainer}
-              onPress={() => setShowTimePicker(true)}
-            >
-              <Text style={styles.input}>
-                {`${rideTime.getHours().toString().padStart(2, '0')}:${rideTime.getMinutes().toString().padStart(2, '0')}`}
-              </Text>
-            </TouchableOpacity>
-            {showTimePicker && (
-              <DateTimePicker
-                value={rideTime}
-                mode="time"
-                onChange={(event, selectedTime) => {
-                  setShowTimePicker(false);
-                  if (selectedTime) setRideTime(selectedTime);
-                }}
-              />
-            )}
-          </View>
+        {/* Time */}
+        <Text style={styles.label}>Ride Time</Text>
+        <TouchableOpacity
+          style={inputField}
+          onPress={() => setShowTimePicker(true)}
+        >
+          <Text>
+            {rideTime.getHours().toString().padStart(2, "0")}:
+            {rideTime.getMinutes().toString().padStart(2, "0")}
+          </Text>
+        </TouchableOpacity>
+        {showTimePicker && (
+          <DateTimePicker
+            value={rideTime}
+            mode="time"
+            display="default"
+            onChange={(event, time) => {
+              setShowTimePicker(false);
+              if (time) setRideTime(time);
+            }}
+          />
+        )}
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Available Seats *</Text>
-            <View style={styles.inputContainer}>
-              <Picker
-                selectedValue={availableSeats}
-                onValueChange={(itemValue) => setAvailableSeats(itemValue)}
-                style={styles.picker}
+        {/* Seats */}
+        <Text style={styles.label}>Available Seats</Text>
+        <TextInput
+          style={inputField}
+          placeholder="Enter available seats"
+          keyboardType="numeric"
+          value={availableSeats}
+          onChangeText={setAvailableSeats}
+        />
+
+        {/* Routes */}
+        {loadingRoutes ? (
+          <ActivityIndicator size="large" color="#0051a8" style={{ marginTop: 20 }} />
+        ) : routes.length > 0 ? (
+          <FlatList
+            data={routes}
+            horizontal
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item, index }) => (
+              <TouchableOpacity
+                style={[
+                  styles.routeCard,
+                  selectedRoute === index && styles.routeCardSelected,
+                ]}
+                onPress={() => setSelectedRoute(index)}
               >
-                {[...Array(8).keys()].map((i) => (
-                  <Picker.Item key={i + 1} label={`${i + 1}`} value={`${i + 1}`} />
-                ))}
-              </Picker>
-            </View>
-          </View>
+                <Text style={styles.routeTitle}>Route {index + 1}</Text>
+                <Text style={styles.routeSubtitle}>
+                  Distance: {(item.legs?.[0]?.distance / 1000).toFixed(1)} km
+                </Text>
+                <Text style={styles.routeSubtitle}>
+                  Duration: {(item.legs?.[0]?.duration / 60).toFixed(0)} min
+                </Text>
+              </TouchableOpacity>
+            )}
+            style={{ marginTop: 10 }}
+          />
+        ) : (
+          selectedStart &&
+          selectedEnd && (
+            <Text style={styles.noRide}>No routes available</Text>
+          )
+        )}
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.submitButton]}
-              onPress={handleSubmit}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Create Ride</Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.clearButton]}
-              onPress={handleClear}
-              disabled={isLoading}
-            >
-              <Text style={styles.buttonText}>Clear All</Text>
-            </TouchableOpacity>
-          </View>
-
-          {status && (
-            <View style={[
-              styles.statusContainer,
-              { backgroundColor: status.includes('✅') ? '#d4edda' : '#f8d7da' },
-            ]}>
-              <Text style={[
-                styles.statusText,
-                { color: status.includes('✅') ? '#155724' : '#721c24' },
-              ]}>
-                <Text style={styles.bold}>Status: </Text>
-                {status}
-              </Text>
-            </View>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        {/* Submit */}
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+          <Text style={styles.submitText}>Create Ride</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </TouchableWithoutFeedback>
   );
 }
 
+// ---------- Styles ----------
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  scrollContent: {
-    padding: 20,
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  section: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#555',
-    marginBottom: 8,
-  },
-  inputContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    padding: 12,
-  },
+  container: { flex: 1, backgroundColor: "#fff", padding: 20 },
+  title: { fontSize: 22, fontWeight: "700", color: "#333", marginBottom: 10 },
+  label: { fontSize: 14, fontWeight: "600", color: "#555", marginTop: 10 },
   input: {
-    fontSize: 16,
-    color: '#333',
-  },
-  suggestionList: {
-    maxHeight: 200,
-    backgroundColor: '#fff',
-    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    marginTop: 8,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 6,
+    marginBottom: 4,
   },
-  suggestion: {
-    padding: 12,
+  dropdown: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#eee",
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  dropdownItem: {
+    padding: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#eee",
   },
-  suggestionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  suggestionSubtitle: {
-    fontSize: 12,
-    color: '#666',
-  },
-  selectedLocation: {
-    marginTop: 10,
+  routeCard: {
+    backgroundColor: "#f9f9f9",
     padding: 12,
-    backgroundColor: '#d4edda',
-    borderRadius: 8,
-  },
-  selectedText: {
-    fontSize: 14,
-    color: '#155724',
-  },
-  selectedSubText: {
-    fontSize: 12,
-    color: '#155724',
-  },
-  bold: {
-    fontWeight: '700',
-  },
-  picker: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginHorizontal: 5,
-  },
-  submitButton: {
-    backgroundColor: '#007bff',
-  },
-  clearButton: {
-    backgroundColor: '#6c757d',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  statusContainer: {
-    marginTop: 20,
-    padding: 15,
-    borderRadius: 8,
+    borderRadius: 10,
+    marginRight: 10,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#ddd",
+    width: 160,
   },
-  statusText: {
-    fontSize: 14,
+  routeCardSelected: {
+    backgroundColor: "#e3f2fd",
+    borderColor: "#0051a8",
   },
+  routeTitle: { fontSize: 15, fontWeight: "600", color: "#333" },
+  routeSubtitle: { fontSize: 13, color: "#555" },
+  noRide: { textAlign: "center", marginTop: 20, color: "#888" },
+  submitButton: {
+    marginTop: 20,
+    backgroundColor: "#0051a8",
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  submitText: { color: "#fff", fontWeight: "600", fontSize: 15 },
 });

@@ -4,11 +4,9 @@ import {
   WorkSans_500Medium,
   WorkSans_700Bold,
 } from "@expo-google-fonts/work-sans";
-import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { Image } from "expo-image";
 import { router, Stack } from "expo-router";
-import { ActivityIndicator, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
@@ -33,27 +31,13 @@ export default function RootLayout() {
   }
 
   const navigateTo = () => {
-    console.log('navigating');
-
     router.push('/profile');
   }
 
-  // Shared headerRight with profile icon
-  const headerRight = () => (
-    <TouchableOpacity onPress={() => navigateTo()} >
-      <Image
-        source={require('../assets/images/profile-pic-icon.png')}
-        style={{ width: 28, height: 28, borderRadius: 14, marginRight: 12 }}
-      />
-    </TouchableOpacity>
-  );
-
-  // Helper to create options per screen
   const screenOptions = (title: string) => ({
-    headerShown: true,
+    headerShown: false,
     headerTitle: title,
     headerTitleAlign: 'center',
-    headerRight,
   });
 
   return (
@@ -61,7 +45,7 @@ export default function RootLayout() {
       <SafeAreaView style={{ flex: 1 }} edges={["top", "right", "left"]}>
         <Provider store={store}>
           <PersistGate loading={null} persistor={persistor}>
-            <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+            {/* <ThemeProvider> */}
               <Stack screenOptions={{ headerShown: true, headerTitleAlign: "center" }}>
                 <Stack.Screen name="welcome" options={screenOptions("Welcome")} />
                 <Stack.Screen name="signup" options={screenOptions("Sign Up")} />
@@ -74,9 +58,8 @@ export default function RootLayout() {
                 <Stack.Screen name="profile" options={screenOptions("Profile")} />
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="my-ride" options={screenOptions("My Rides")} />
-
               </Stack>
-            </ThemeProvider>
+            {/* </ThemeProvider> */}
           </PersistGate>
         </Provider>
 

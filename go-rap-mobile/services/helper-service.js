@@ -6,12 +6,15 @@ const getToken = () => {
 }
 
 const setToken = (token) => {
-    console.log('setting token', token);
-    
     TOKEN = token;
+}
+
+const removeToken = () => {
+    TOKEN = null;
 }
 
 export const HelperService = {
     getToken,
     setToken,
+    removeToken
 };
