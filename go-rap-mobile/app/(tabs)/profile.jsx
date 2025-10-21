@@ -28,7 +28,7 @@ export default function ProfileScreen() {
   const dispatch = useDispatch();
 
   const handleEditProfile = () => {
-    Alert.alert('Edit Profile', 'This feature will be implemented soon!');
+    Alert.alert('Edit Profile', 'This feature will be implemented soon!!');
   };
 
   const handleLogout = () => {
