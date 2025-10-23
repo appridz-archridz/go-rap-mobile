@@ -28,6 +28,8 @@ const Welcome = () => {
 
 
     const GetStartedOnPress = () => {
+        console.log('Bye from welcome.jsx -> GetStartedOnPress()');
+        
         router.push("/login");
     }
 

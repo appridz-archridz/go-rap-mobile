@@ -1,6 +1,8 @@
 import { FontAwesome } from "@expo/vector-icons";
 import { router } from "expo-router";
+
 import { useEffect, useRef, useState } from "react";
+
 import {
   ActivityIndicator,
   Alert,
@@ -34,6 +36,7 @@ export default function SearchRideScreen() {
   const toDebounceRef = useRef(null);
 
   const handleFromChange = (text) => {
+
     setFromQuery(text);
     if (fromDebounceRef.current) clearTimeout(fromDebounceRef.current);
     fromDebounceRef.current = setTimeout(async () => {
@@ -152,6 +155,7 @@ export default function SearchRideScreen() {
   );
 
   return (
+
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <ScrollView style={styles.container}>
         <Text style={styles.title}>Search Rides</Text>
@@ -221,6 +225,18 @@ export default function SearchRideScreen() {
             <Text style={styles.noRideText}>No rides found for this route</Text>
           )
         )}
+
+        {/* <Button
+          onPress={() =>
+            toast.show({
+              title: "Success!",
+              status: "success",
+              description: "This is a NativeBase toast message 🚀",
+            })
+          }
+        >
+          Show Toast
+        </Button> */}
 
         {/* Route Info */}
         {routes.length > 0 && (

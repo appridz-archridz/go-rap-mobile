@@ -4,19 +4,20 @@ import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Image,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import PressableButton from "../components/PressableButton";
+import { AuthService } from "../components/services/authService";
 import { inputField } from "../global-css";
+import { login } from "../redux/authSlice";
+import { useSnackbar } from './../components/ui/SnackbarProvider';
 
 const eyeOpen = require("../assets/images/eye-open.png");
 const eyeClosed = require("../assets/images/eye-closed.png");
@@ -28,6 +29,8 @@ const Login = () => {
   const [errors, setErrors] = useState({ email: "", password: "" });
   const dispatch = useDispatch();
   const { isAuthenticated, email } = useSelector((state) => state.auth);
+  const [IsSnackbarVisible, setIsSnackbarVisible] = useState(false);
+  const Snackbar = useSnackbar();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -66,7 +69,6 @@ const Login = () => {
       isDevice: Device.isDevice,
     };
 
-    console.log("Device Info:", deviceInfo);
     return deviceInfo;
   };
 
@@ -83,18 +85,17 @@ const Login = () => {
   };
 
   const handleLogin = async () => {
-
     if (!validate()) return;
-
+    
     const payLoad = {
       usernameOrEmail: form.email,
       password: form.password,
     };
-
+    
     try {
       const { data } = await AuthService.login(payLoad);
       const token = data.data?.token;
-
+      
       if (data.statusCode === "200 OK") {
         const stateData = {
           token: token,
@@ -103,20 +104,25 @@ const Login = () => {
           phone: data.data.phoneNumber,
           deviceName: getDeviceInfo().modelName,
         }
-        await AsyncStorage.setItem("token", token);
         dispatch(login(stateData));
-        router.push("/search-ride");
+        setIsSnackbarVisible(true);
+        Snackbar.show('success', "Log in succesfull");
+        router.push('/search-ride');
 
       } else {
         console.log("Login failed:", data.message);
+        Snackbar.show('error', data.message || "Login failed. Try again.");
       }
     } catch (error) {
       if (error.response) {
         console.log("Server error:", error.response.data.message);
+        Snackbar.show('error', error.response.data.message || "Login failed. Try again.");
       } else if (error.request) {
         console.log("Network error: server not reachable");
+        Snackbar.show('error', "Network error: server not reachable");
       } else {
         console.log("Unexpected error:", error.message);
+        Snackbar.show('error', error.message || "Login failed. Try again.");
       }
     }
   };
@@ -126,107 +132,122 @@ const Login = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
+      {/* <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={90}
+      > */}
+      <ScrollView
+        contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView
-          contentContainerStyle={styles.contentContainer}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Logo */}
-          <View style={styles.logoContainer}>
-            {/* <Image source={locationIcon} style={styles.logo} resizeMode="contain" /> */}
-            <FontAwesome name='motorcycle' size={100} color="#007AFF" />
-            <Text style={styles.appName}>Go-Rap</Text>
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          {/* <Image source={locationIcon} style={styles.logo} resizeMode="contain" /> */}
+          <FontAwesome name='motorcycle' size={100} color="#007AFF" />
+          <Text style={styles.appName}>Go-Rap</Text>
+        </View>
+
+        {/* Form */}
+        <View style={styles.formContainer}>
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>Sign in to continue</Text>
+
+          {/* Email Input */}
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={inputField}
+              placeholder="Email address"
+              placeholderTextColor="#999"
+              value={form.email}
+              onChangeText={(text) => {
+                setForm({ ...form, email: text });
+                validateField("email", text);
+              }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
           </View>
 
-          {/* Form */}
-          <View style={styles.formContainer}>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue</Text>
+          {/* Password Input */}
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={{ ...inputField, paddingRight: 44 }}
+              placeholder="Password"
+              placeholderTextColor="#999"
+              value={form.password}
+              onChangeText={(text) => {
+                setForm({ ...form, password: text });
+                validateField("password", text);
+              }}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+            />
 
-            {/* Email Input */}
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={inputField}
-                placeholder="Email address"
-                placeholderTextColor="#999"
-                value={form.email}
-                onChangeText={(text) => {
-                  setForm({ ...form, email: text });
-                  validateField("email", text);
-                }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
-            </View>
-
-            {/* Password Input */}
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={{ ...inputField, paddingRight: 44 }}
-                placeholder="Password"
-                placeholderTextColor="#999"
-                value={form.password}
-                onChangeText={(text) => {
-                  setForm({ ...form, password: text });
-                  validateField("password", text);
-                }}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-              />
-
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                <Image
-                  style={styles.eyeIcon}
-                  source={showPassword ? eyeClosed : eyeOpen}
-                />
-              </TouchableOpacity>
-
-            </View>
-
-            {/* Forgot Password */}
             <TouchableOpacity
-              style={styles.forgotPasswordButton}
-              onPress={handleForgotPassword}
+              style={styles.eyeButton}
+              onPress={() => setShowPassword(!showPassword)}
             >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              <Image
+                style={styles.eyeIcon}
+                source={showPassword ? eyeClosed : eyeOpen}
+              />
             </TouchableOpacity>
 
-            {/* Login Button */}
-            <PressableButton onPress={handleLogin} text="Log in" />
-
-            {/* Divider */}
-            <View style={styles.dividerContainer}>
-              <View style={styles.divider} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.divider} />
-            </View>
-
-            {/* Google Login */}
-            <TouchableOpacity style={styles.socialButton}>
-              <Image style={styles.socialIcon} source={googleIcon} />
-              <Text style={styles.socialButtonText}>Continue with Google</Text>
-            </TouchableOpacity>
-
-            {/* Sign Up */}
-            <View style={styles.signupContainer}>
-              <Text style={styles.signupText}>Don’t have an account? </Text>
-              <TouchableOpacity onPress={handleSignUp}>
-                <Text style={styles.signupLink}>Sign Up</Text>
-              </TouchableOpacity>
-            </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+
+          {/* Forgot Password */}
+          <TouchableOpacity
+            style={styles.forgotPasswordButton}
+            onPress={handleForgotPassword}
+          >
+            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          </TouchableOpacity>
+
+          {/* Login Button */}
+          <PressableButton disabled={!form.email || !form.password} onPress={handleLogin} text="Log in" />
+
+          {/* Divider */}
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.divider} />
+          </View>
+
+          {/* Google Login */}
+          <TouchableOpacity style={styles.socialButton}>
+            <Image style={styles.socialIcon} source={googleIcon} />
+            <Text style={styles.socialButtonText}>Continue with Google</Text>
+          </TouchableOpacity>
+
+          {/* Sign Up */}
+          <View style={styles.signupContainer}>
+            <Text style={styles.signupText}>Don’t have an account? </Text>
+            <TouchableOpacity onPress={handleSignUp}>
+              <Text style={styles.signupLink}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Snackbar */}
+        {/* <View>
+          <Snackbar
+            visible={IsSnackbarVisible}
+            onDismiss={() => setIsSnackbarVisible(false)}
+            duration={3000}
+            style={styles.snackbar}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <FontAwesome name="check-circle" size={25} color="#fff" style={{ marginRight: 10 }} />
+              <Text style={styles.snackbarText}>  </Text>
+            </View>
+          </Snackbar>
+        </View> */}
+      </ScrollView>
+      {/* </KeyboardAvoidingView> */}
+    </SafeAreaView >
   );
 };
 
