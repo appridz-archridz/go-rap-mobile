@@ -34,7 +34,14 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,3 +1,4 @@
+import * as Application from 'expo-application';
 import * as Device from "expo-device";
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -16,6 +17,7 @@ import {
 import FilePicker from '../components/FilePicker';
 import PressableButton from '../components/PressableButton';
 import { signUp } from '../components/services/authService';
+import { useSnackbar } from '../components/ui/SnackbarProvider';
 
 const eyeOpen = require('../assets/images/eye-open.png');
 const eyeClosed = require('../assets/images/eye-closed.png');
@@ -31,6 +33,8 @@ const SignUp2 = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const customStyles = { bgColor: '#2094F3', color: '#fff' };
+
+  const snackbar = useSnackbar();
 
   const validateField = (field, value) => {
     let message = '';
@@ -75,7 +79,13 @@ const SignUp2 = () => {
     return allValid;
   };
 
-  const getDeviceInfo = () => {
+
+
+  const getDeviceInfo = async () => {
+    const deviceId = Device.osName === 'iOS'
+      ? await Application.getIosIdForVendorAsync()
+      : Application.getAndroidId();
+
     const deviceInfo = {
       brand: Device.brand,
       manufacturer: Device.manufacturer,
@@ -88,27 +98,43 @@ const SignUp2 = () => {
       productName: Device.productName,
       deviceType: Device.deviceType,
       isDevice: Device.isDevice,
+      uniqueId: deviceId,
     };
     return deviceInfo;
   };
 
+
   const handleSubmit = async () => {
     console.log('handle submit');
-    
-    if (validate()) {
-      const payload = {
-        userName: fullName,
-        email,
-        password,
-        phoneNumber: phone,
-        address: '',
-        role: 'USER',
-        deviceName: getDeviceInfo().modelName,
-      };
 
+    if (!validate()) return;
+
+    const payload = {
+      userName: fullName,
+      email,
+      password,
+      phoneNumber: phone,
+      address: '',
+      role: 'USER',
+      profilePic: profilePic?.uri,
+      deviceName: (await getDeviceInfo()).uniqueId,
+    };
+
+    try {
       const response = await signUp(payload);
-      console.log('Done with signup', response);
-      // router.push('/some-success-page')?
+
+      if (response.data.success) {
+        console.log('Done with signup');
+        router.push('/login');
+        snackbar.show('success', 'Signup successful');
+      } else {
+        setModalMessage(response?.message || 'Signup failed. Try again.');
+        snackbar.show('error', response?.message || 'Signup failed. Try again.');
+      }
+    } catch (error) {
+      const message = error?.response?.data?.message || error?.message || "Network error";
+      snackbar.show('error', response?.message || 'Signup failed. Try again.');
+
     }
   };
 

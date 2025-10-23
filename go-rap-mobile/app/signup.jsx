@@ -2,14 +2,12 @@ import { router } from "expo-router";
 import { useState } from "react";
 import {
   Image,
-  KeyboardAvoidingView,
-  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  View,
+  View
 } from "react-native";
 import { useSelector } from "react-redux";
 import PressableButton from "../components/PressableButton";
@@ -101,11 +99,11 @@ const SignUp = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
+      {/* <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={90}
-      >
+      > */}
         <ScrollView>
           {/* Top Section */}
           <View style={styles.topContent}>
@@ -183,7 +181,7 @@ const SignUp = () => {
             />
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      {/* </KeyboardAvoidingView> */}
     </SafeAreaView>
   );
 };
