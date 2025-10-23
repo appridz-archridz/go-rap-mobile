@@ -12,8 +12,8 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback
 } from "react-native";
-import { v4 as uuidv4 } from "uuid";
 import { inputField } from "../../global-css";
+import { RideService } from "../../services/ride-service";
 import { olaService } from "../../services/thirdPartyApis";
 
 export default function CreateRideScreen() {
@@ -76,7 +76,6 @@ export default function CreateRideScreen() {
       setRoutes(routesData);
       if (routesData.length > 0) setSelectedRoute(0);
     } catch (err) {
-      console.error("Error fetching routes:", err);
     } finally {
       setLoadingRoutes(false);
     }
@@ -96,24 +95,25 @@ export default function CreateRideScreen() {
       return;
     }
 
+
     const rideDTO = {
-      id: uuidv4(),
       startPoint: selectedStart.description,
       endPoint: selectedEnd.description,
-      startLat: selectedStart.geometry.location.lat,
-      startLng: selectedStart.geometry.location.lng,
-      endLat: selectedEnd.geometry.location.lat,
-      endLng: selectedEnd.geometry.location.lng,
+      startLatitude: selectedStart.geometry.location.lat,
+      startLongitude: selectedStart.geometry.location.lng,
+      destinationLatitude: selectedEnd.geometry.location.lat,
+      destinationLongitude: selectedEnd.geometry.location.lng,
       rideDate: rideDate.toISOString().split("T")[0],
       rideTime: `${rideTime.getHours().toString().padStart(2, "0")}:${rideTime
         .getMinutes()
         .toString()
         .padStart(2, "0")}`,
-      availableSeats: parseInt(availableSeats),
-      selectedRoute: routes[selectedRoute] || null,
+      availableSeats: parseInt(availableSeats)
     };
 
-    console.log("✅ Ride DTO:", rideDTO);
+    const response = RideService.createRide("96d6d860-ec82-4be9-88da-59687907117a",rideDTO)
+    
+
     Alert.alert("Ride Created", "Ride created successfully! Check console.");
   };
 

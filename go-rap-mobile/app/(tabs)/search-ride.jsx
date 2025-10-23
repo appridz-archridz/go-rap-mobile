@@ -36,8 +36,10 @@ export default function SearchRideScreen() {
   const toDebounceRef = useRef(null);
 
   const handleFromChange = (text) => {
-
     setFromQuery(text);
+    // Clear selected location when user types
+    setSelectedFrom(null);
+    
     if (fromDebounceRef.current) clearTimeout(fromDebounceRef.current);
     fromDebounceRef.current = setTimeout(async () => {
       if (text.length > 1) {
@@ -45,7 +47,6 @@ export default function SearchRideScreen() {
           const results = await olaService.search(text);
           setFromSuggestions(results);
         } catch (error) {
-          console.error("Error fetching from locations:", error);
         }
       } else {
         setFromSuggestions([]);
@@ -55,6 +56,9 @@ export default function SearchRideScreen() {
 
   const handleToChange = (text) => {
     setToQuery(text);
+    // Clear selected location when user types
+    setSelectedTo(null);
+    
     if (toDebounceRef.current) clearTimeout(toDebounceRef.current);
     toDebounceRef.current = setTimeout(async () => {
       if (text.length > 1) {
@@ -62,7 +66,6 @@ export default function SearchRideScreen() {
           const results = await olaService.search(text);
           setToSuggestions(results);
         } catch (error) {
-          console.error("Error fetching to locations:", error);
         }
       } else {
         setToSuggestions([]);
@@ -72,24 +75,38 @@ export default function SearchRideScreen() {
 
   // 🗺️ Fetch Ola route info + rides when both are selected
   const fetchRidesAndRoutes = async () => {
-    if (!selectedFrom?.geometry || !selectedTo?.geometry) return;
+    if (!selectedFrom?.geometry?.location || !selectedTo?.geometry?.location) {
+      return;
+    }
 
     setLoading(true);
     setRides([]);
     setRoutes([]);
 
     try {
-      // 1️⃣ Fetch rides from backend
-      const ridesData = await getRides(selectedFrom, selectedTo);
+      // Get current date in local format
+      const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+
+      // 1️⃣ Create search DTO with actual coordinates from Ola response
+      const searchDTO = {
+        sourceLatitude: selectedFrom.geometry.location.lat,
+        sourceLongitude: selectedFrom.geometry.location.lng,
+        destinationLatitude: selectedTo.geometry.location.lat,
+        destinationLongitude: selectedTo.geometry.location.lng,
+        localDate: currentDate,
+      };
+
+
+      // 2️⃣ Fetch rides from backend with searchDTO
+      const ridesData = await getRides(searchDTO);
       setRides(ridesData);
 
-      // 2️⃣ Fetch routes from Ola Maps
+      // 3️⃣ Fetch routes from Ola Maps
       const origin = selectedFrom.geometry.location;
       const destination = selectedTo.geometry.location;
       const routesData = await olaService.getRoute(origin, destination);
       setRoutes(routesData);
     } catch (error) {
-      console.error("Error fetching rides/routes:", error);
       Alert.alert("Error", "Failed to fetch rides or route data");
     } finally {
       setLoading(false);
@@ -117,7 +134,12 @@ export default function SearchRideScreen() {
         }
       }}
     >
-      <Text>{item.description}</Text>
+      <Text style={styles.suggestionMain}>{item.structured_formatting?.main_text || item.description}</Text>
+      {item.structured_formatting?.secondary_text && (
+        <Text style={styles.suggestionSecondary}>
+          {item.structured_formatting.secondary_text}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 
@@ -155,7 +177,6 @@ export default function SearchRideScreen() {
   );
 
   return (
-
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <ScrollView style={styles.container}>
         <Text style={styles.title}>Search Rides</Text>
@@ -165,20 +186,27 @@ export default function SearchRideScreen() {
           <Text style={styles.label}>From</Text>
           <View style={inputWithCross}>
             <TextInput
-              style={inputField} placeholder="Enter starting location" value={fromQuery} onChangeText={handleFromChange}
+              style={inputField}
+              placeholder="Enter starting location"
+              value={fromQuery}
+              onChangeText={handleFromChange}
             />
             {fromQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setFromQuery("")} style={clearButton}>
+              <TouchableOpacity
+                onPress={() => {
+                  setFromQuery("");
+                  setSelectedFrom(null);
+                }}
+                style={clearButton}
+              >
                 <FontAwesome name="times-circle" size={20} color="#999" />
               </TouchableOpacity>
             )}
-            <TouchableOpacity onPress={() => setFromQuery("")}>
-            </TouchableOpacity>
           </View>
           {fromSuggestions.length > 0 && (
             <FlatList
               data={fromSuggestions}
-              keyExtractor={(_, i) => i.toString()}
+              keyExtractor={(item, i) => item.place_id || i.toString()}
               renderItem={renderSuggestion}
               style={styles.dropdown}
             />
@@ -186,28 +214,36 @@ export default function SearchRideScreen() {
         </View>
 
         {/* To */}
-        <Text style={styles.label}>To</Text>
-        <View style={inputWithCross}>
-          <TextInput
-            style={inputField}
-            placeholder="Enter destination"
-            value={toQuery}
-            onChangeText={handleToChange}
-          />
-          {toQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setToQuery("")} style={clearButton}>
-              <FontAwesome name="times-circle" size={20} color="#999" />
-            </TouchableOpacity>
+        <View style={{ position: 'relative', marginTop: 10 }}>
+          <Text style={styles.label}>To</Text>
+          <View style={inputWithCross}>
+            <TextInput
+              style={inputField}
+              placeholder="Enter destination"
+              value={toQuery}
+              onChangeText={handleToChange}
+            />
+            {toQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => {
+                  setToQuery("");
+                  setSelectedTo(null);
+                }}
+                style={clearButton}
+              >
+                <FontAwesome name="times-circle" size={20} color="#999" />
+              </TouchableOpacity>
+            )}
+          </View>
+          {toSuggestions.length > 0 && (
+            <FlatList
+              data={toSuggestions}
+              keyExtractor={(item, i) => item.place_id || i.toString()}
+              renderItem={renderSuggestion}
+              style={styles.dropdown}
+            />
           )}
         </View>
-        {toSuggestions.length > 0 && (
-          <FlatList
-            data={toSuggestions}
-            keyExtractor={(_, i) => i.toString()}
-            renderItem={renderSuggestion}
-            style={styles.dropdown}
-          />
-        )}
 
         {/* Results */}
         {loading ? (
@@ -225,18 +261,6 @@ export default function SearchRideScreen() {
             <Text style={styles.noRideText}>No rides found for this route</Text>
           )
         )}
-
-        {/* <Button
-          onPress={() =>
-            toast.show({
-              title: "Success!",
-              status: "success",
-              description: "This is a NativeBase toast message 🚀",
-            })
-          }
-        >
-          Show Toast
-        </Button> */}
 
         {/* Route Info */}
         {routes.length > 0 && (
@@ -291,6 +315,16 @@ const styles = StyleSheet.create({
     padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
+  },
+  suggestionMain: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+  },
+  suggestionSecondary: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 2,
   },
   rideCard: {
     backgroundColor: "#f9f9f9",
