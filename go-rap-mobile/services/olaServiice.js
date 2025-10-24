@@ -17,7 +17,6 @@ export const olaService = {
       });
       return response.data?.predictions || [];
     } catch (err) {
-      console.error("Ola API error:", err?.response?.data || err.message);
       return [];
     }
   },
@@ -35,10 +34,8 @@ export const olaService = {
           },
         }
       );
-      console.log("Ola Route response:", response.data);
       return response.data?.routes || [];
     } catch (err) {
-      console.error("Ola Route API error:", err?.response?.data || err.message);
       return [];
     }
   },
