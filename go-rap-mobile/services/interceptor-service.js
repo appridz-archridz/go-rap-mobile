@@ -9,6 +9,8 @@ api.interceptors.request.use(async (config) => {
   const token = HelperService.getToken();
   const tokenAsync = await AsyncStorage.getItem("token");
   if (token) {
+    console.log('toke is from interceptor', token);
+    
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;

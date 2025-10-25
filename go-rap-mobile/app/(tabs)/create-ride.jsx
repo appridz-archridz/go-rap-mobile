@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback
 } from "react-native";
+import { useSelector } from "react-redux";
 import { inputField } from "../../global-css";
 import { RideService } from "../../services/ride-service";
 import { olaService } from "../../services/thirdPartyApis";
@@ -36,6 +37,8 @@ export default function CreateRideScreen() {
   // debounce refs
   const startDebounceRef = useRef(null);
   const endDebounceRef = useRef(null);
+
+  const selector = useSelector((state) => state.auth);
 
   // 🔍 Fetch location suggestions with debounce
   const handleStartChange = (text) => {
@@ -95,7 +98,6 @@ export default function CreateRideScreen() {
       return;
     }
 
-
     const rideDTO = {
       startPoint: selectedStart.description,
       endPoint: selectedEnd.description,
@@ -111,10 +113,11 @@ export default function CreateRideScreen() {
       availableSeats: parseInt(availableSeats)
     };
 
-    const response = RideService.createRide("96d6d860-ec82-4be9-88da-59687907117a",rideDTO)
+    const userId = selector.userId;
     
-
-    Alert.alert("Ride Created", "Ride created successfully! Check console.");
+    console.log('Ride ceated', userId, rideDTO);
+    const response = RideService.createRide(userId, rideDTO)
+    
   };
 
   const renderSuggestion = ({ item }) => (

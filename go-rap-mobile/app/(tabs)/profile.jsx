@@ -55,10 +55,9 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     AuthService.getProfileInfo().then((response) => {
-      console.log('response', response);
       setUser(response.data.data);
     }).catch((error) => {
-      console.log(error);
+      console.error(error);
     });
   }, []);
 
@@ -84,10 +83,7 @@ export default function ProfileScreen() {
 
   const takePicture = async () => {
     if (cameraRef.current) {
-      console.log('cameraRef', cameraRef);
-
       const photo = await cameraRef.current.takePictureAsync();
-      console.log("Captured photo:", photo.uri);
       setCapturedImage(photo.uri);
       setShowCamera(false);
       setIsImageVerified(false);
