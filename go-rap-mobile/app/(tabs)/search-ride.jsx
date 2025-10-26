@@ -16,6 +16,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { Button } from "react-native-paper";
 import { clearButton, inputField, inputWithCross } from "../../global-css";
 import { getRides } from "../../services/ride-service";
 import { olaService } from "../../services/thirdPartyApis";
@@ -39,14 +40,14 @@ export default function SearchRideScreen() {
     setFromQuery(text);
     // Clear selected location when user types
     setSelectedFrom(null);
-    
+
     if (fromDebounceRef.current) clearTimeout(fromDebounceRef.current);
     fromDebounceRef.current = setTimeout(async () => {
       if (text.length > 1) {
         try {
           const results = await olaService.search(text);
           console.log('handlefromchange', results);
-          
+
           setFromSuggestions(results);
         } catch (error) {
         }
@@ -60,7 +61,7 @@ export default function SearchRideScreen() {
     setToQuery(text);
     // Clear selected location when user types
     setSelectedTo(null);
-    
+
     if (toDebounceRef.current) clearTimeout(toDebounceRef.current);
     toDebounceRef.current = setTimeout(async () => {
       if (text.length > 1) {
@@ -100,9 +101,9 @@ export default function SearchRideScreen() {
 
       // 2️⃣ Fetch rides from backend with searchDTO
       const ridesData = await getRides(searchDTO);
-      console.log('rides data is ', ridesData);
-      
-      setRides(ridesData);
+      console.log('rides data is ', ridesData.data.data);
+
+      setRides(ridesData.data.data);
 
       // 3️⃣ Fetch routes from Ola Maps
       const origin = selectedFrom.geometry.location;
@@ -248,27 +249,47 @@ export default function SearchRideScreen() {
           )}
         </View>
 
+        <Button onPress={fetchRidesAndRoutes}> search </Button>
+
         {/* Results */}
         {loading ? (
           <ActivityIndicator size="large" color="#0051a8" style={{ marginTop: 30 }} />
-        ) : rides.length > 0 ? (
-          <FlatList
-            data={rides}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={renderRideCard}
-            contentContainerStyle={{ paddingBottom: 20 }}
-          />
         ) : (
-          selectedFrom &&
-          selectedTo && (
-            <Text style={styles.noRideText}>No rides found for this route</Text>
-          )
+          <>
+            {rides.length > 0 && (
+              <FlatList
+                data={rides}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={renderRideCard}
+                contentContainerStyle={{ paddingBottom: 20 }}
+              />
+            )}
+            {selectedFrom && selectedTo && rides.length === 0 && (
+              <Text style={styles.noRideText}>No rides found for this route</Text>
+            )}
+          </>
         )}
 
         {/* Route Info */}
         {routes.length > 0 && (
           <>
             <Text style={[styles.label, { marginTop: 20 }]}>Suggested Routes</Text>
+            <Text> { routes.length } </Text>
+            {
+              routes.map((r) => {
+                return (
+                  <View>
+                    <Text style={styles.routeTitle}>Route {r.id}</Text>
+                    <Text style={styles.routeSubtitle}>
+                      Distance: {(r.legs?.[0]?.distance / 1000).toFixed(1)} km
+                    </Text>
+                    <Text style={styles.routeSubtitle}>
+                      Duration: {(r.legs?.[0]?.duration / 60).toFixed(0)} min
+                    </Text>
+                  </View>
+                );
+              })
+            }
             <FlatList
               horizontal
               data={routes}
