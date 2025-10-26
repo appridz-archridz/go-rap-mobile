@@ -1,7 +1,8 @@
 import api from "./interceptor-service";
 
-const RIDE_BASE_URL = "http://192.168.29.72:8077/gorap/rides";
+// const RIDE_BASE_URL = "http://192.168.29.72:8077/gorap/rides";
 // const RIDE_BASE_URL = "http://192.168.0.12:8077/gorap/rides";
+const RIDE_BASE_URL = "https://ride-service-mo73.onrender.com/gorap/rides";
 
 export const RideService = {
   createRide: (userId, rideDTO) => {

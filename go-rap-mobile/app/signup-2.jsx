@@ -121,8 +121,6 @@ const SignUp2 = () => {
       };
       
       const response = await signUp(payload);
-      console.log('signup done', response);
-      
 
       if (response && response?.data?.success) {
         console.log('Done with signup');
