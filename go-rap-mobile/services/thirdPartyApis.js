@@ -15,7 +15,6 @@ export const olaService = {
     if (!query || query.length < 2) return [];
 
     try {
-      console.log("🔍 Ola autocomplete query:", query);
 
       const response = await axios.get(OLA_MAPS_AUTOCOMPLETE_BASE_URL, {
         headers: {
@@ -29,7 +28,6 @@ export const olaService = {
         },
       });
 
-      console.log("✅ Ola autocomplete response:", response.data);
       return response.data?.predictions || [];
     } catch (err) {
       console.error("❌ Ola Maps Autocomplete error:", err?.response?.data || err.message);
@@ -45,7 +43,6 @@ export const olaService = {
     }
 
     try {
-      console.log("🗺️ Fetching Ola route:", origin, "➡️", destination);
 
       const url = `${OLA_MAPS_DIRECTIONS_BASE_URL}?origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&api_key=${OLA_MAPS_API_KEY}`;
 
@@ -60,7 +57,6 @@ export const olaService = {
         }
       );
 
-      console.log("✅ Ola route response:", response.data);
       return response.data?.routes || [];
     } catch (err) {
       console.error("❌ Ola Maps Directions error:", err?.response?.data || err.message);
@@ -68,10 +64,6 @@ export const olaService = {
     }
   },
 };
-
-// ===========================================================
-// 🌍 LocationIQ API Configuration
-// ===========================================================
 
 const LOCATIONIQ_API_KEY = "pk.47c7847a08310e3e81cd7e20d05921a2";
 const LOCATIONIQ_AUTO_COMPLETE_BASE_URL = `https://api.locationiq.com/v1/autocomplete`;
@@ -81,7 +73,6 @@ export const locationService = {
     if (!query || query.length < 2) return [];
 
     try {
-      console.log("🔍 LocationIQ query:", query);
 
       const response = await axios.get(LOCATIONIQ_AUTO_COMPLETE_BASE_URL, {
         params: {
@@ -92,7 +83,6 @@ export const locationService = {
         },
       });
 
-      console.log("✅ LocationIQ response:", response.data);
       return response.data;
     } catch (err) {
       console.error("❌ LocationIQ error:", err?.response?.data || err.message);
@@ -100,10 +90,6 @@ export const locationService = {
     }
   },
 };
-
-// ===========================================================
-// 🔑 Google Places API Configuration (Future Use)
-// ===========================================================
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_KEY;
 
@@ -125,10 +111,6 @@ export const googlePlacesService = {
   },
 };
 
-// ===========================================================
-// 🗺️ Mapbox API Configuration (Future Use)
-// ===========================================================
-
 const MAPBOX_API_KEY = process.env.EXPO_PUBLIC_MAPBOX_KEY;
 
 export const mapboxService = {
@@ -146,7 +128,7 @@ export const mapboxService = {
       );
       return response.data.features;
     } catch (err) {
-      console.error("❌ Mapbox error:", err?.response?.data || err.message);
+      console.error("Mapbox error:", err?.response?.data || err.message);
       return [];
     }
   },

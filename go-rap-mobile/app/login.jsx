@@ -97,8 +97,10 @@ const Login = () => {
       const token = data.data?.token;
       
       if (data.statusCode === "200 OK") {
+        
         const stateData = {
           token: token,
+          userId: data.data.id,
           userName: data.data.userName,
           email: data.data.email,
           phone: data.data.phoneNumber,
@@ -107,6 +109,7 @@ const Login = () => {
         dispatch(login(stateData));
         setIsSnackbarVisible(true);
         Snackbar.show('success', "Log in succesfull");
+        console.log('Login successfull!!!');
         router.push('/search-ride');
 
       } else {

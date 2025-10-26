@@ -103,32 +103,30 @@ const SignUp2 = () => {
     return deviceInfo;
   };
 
-
   const handleSubmit = async () => {
     console.log('handle submit');
 
     if (!validate()) return;
 
-    const payload = {
-      userName: fullName,
-      email,
-      password,
-      phoneNumber: phone,
-      address: '',
-      role: 'USER',
-      profilePic: profilePic?.uri,
-      deviceName: (await getDeviceInfo()).uniqueId,
-    };
-
     try {
+      const payload = {
+        userName: fullName,
+        email,
+        password,
+        phoneNumber: phone,
+        address: '',
+        role: 'USER',
+        profilePic: profilePic?.uri,
+        deviceName: (await getDeviceInfo()).uniqueId,
+      };
+      
       const response = await signUp(payload);
 
-      if (response.data.success) {
+      if (response && response?.data?.success) {
         console.log('Done with signup');
         router.push('/login');
         snackbar.show('success', 'Signup successful');
       } else {
-        setModalMessage(response?.message || 'Signup failed. Try again.');
         snackbar.show('error', response?.message || 'Signup failed. Try again.');
       }
     } catch (error) {

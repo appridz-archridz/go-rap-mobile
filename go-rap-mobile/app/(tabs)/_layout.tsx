@@ -17,9 +17,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="search-ride"
         options={{
-          title: 'Home',
+          title: 'Search',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <Ionicons name="search" size={size} color={color} />
           ),
         }}
       />
