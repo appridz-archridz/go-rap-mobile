@@ -110,7 +110,8 @@ export default function CreateRideScreen() {
         .getMinutes()
         .toString()
         .padStart(2, "0")}`,
-      availableSeats: parseInt(availableSeats)
+      availableSeats: parseInt(availableSeats),
+      polyline: routes[0].overview_polyline,
     };
 
     const userId = selector.userId;

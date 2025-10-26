@@ -45,6 +45,8 @@ export default function SearchRideScreen() {
       if (text.length > 1) {
         try {
           const results = await olaService.search(text);
+          console.log('handlefromchange', results);
+          
           setFromSuggestions(results);
         } catch (error) {
         }
@@ -96,9 +98,10 @@ export default function SearchRideScreen() {
         localDate: currentDate,
       };
 
-
       // 2️⃣ Fetch rides from backend with searchDTO
       const ridesData = await getRides(searchDTO);
+      console.log('rides data is ', ridesData);
+      
       setRides(ridesData);
 
       // 3️⃣ Fetch routes from Ola Maps

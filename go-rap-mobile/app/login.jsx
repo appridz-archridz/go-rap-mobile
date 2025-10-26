@@ -109,6 +109,7 @@ const Login = () => {
         dispatch(login(stateData));
         setIsSnackbarVisible(true);
         Snackbar.show('success', "Log in succesfull");
+        console.log('Login successfull!!!');
         router.push('/search-ride');
 
       } else {

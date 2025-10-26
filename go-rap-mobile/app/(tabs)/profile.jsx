@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Camera, CameraView } from "expo-camera";
 import { router } from "expo-router";
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -12,13 +13,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Button, Snackbar } from "react-native-paper";
 import { useDispatch } from "react-redux";
+import { AuthService } from "../../components/services/authService";
+import { useSnackbar } from "../../components/ui/SnackbarProvider";
 import { logout } from "../../redux/authSlice";
 import { HelperService } from "../../services/helper-service";
-import { Button, Snackbar } from "react-native-paper";
-import { useSnackbar } from "../../components/ui/SnackbarProvider";
-import { CameraView, Camera } from "expo-camera";
-import { AuthService } from "../../components/services/authService";
 
 export default function ProfileScreen() {
   const [user, setUser] = useState({
@@ -50,6 +50,8 @@ export default function ProfileScreen() {
     HelperService.removeToken();
     setIsSnackbarVisible(true);
     snackbar.show("success", "Logged out successfully");
+    console.log('Logout succesfull!!!');
+    
     router.replace("/login");
   };
 
