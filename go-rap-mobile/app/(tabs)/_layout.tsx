@@ -41,6 +41,13 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="ride-results"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
+    
   );
 }
