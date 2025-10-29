@@ -86,7 +86,7 @@ const CreateRideScreen = () => {
     }
     try {
       setLoading(true);
-      const res = await RideService.getRoutes(selectedSource, selectedDestination);
+      const res = await olaService.getRoute(selectedSource.geometry.location, selectedDestination.geometry.location);
       setRoutes(res || []);
     } catch {
       Alert.alert("Error", "Failed to fetch routes");
