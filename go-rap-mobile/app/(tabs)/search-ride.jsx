@@ -1,8 +1,6 @@
 import { FontAwesome } from "@expo/vector-icons";
 import { router } from "expo-router";
-
 import { useEffect, useRef, useState } from "react";
-
 import {
   ActivityIndicator,
   Alert,
@@ -16,7 +14,6 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { Button } from "react-native-paper";
 import { clearButton, inputField, inputWithCross } from "../../global-css";
 import { getRides } from "../../services/ride-service";
 import { olaService } from "../../services/thirdPartyApis";
@@ -31,66 +28,55 @@ export default function SearchRideScreen() {
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(false);
   const [routes, setRoutes] = useState([]);
+  const [showFromSuggestions, setShowFromSuggestions] = useState(false);
+  const [showToSuggestions, setShowToSuggestions] = useState(false);
 
-  // debounce references
   const fromDebounceRef = useRef(null);
   const toDebounceRef = useRef(null);
 
   const handleFromChange = (text) => {
     setFromQuery(text);
-    // Clear selected location when user types
     setSelectedFrom(null);
-
     if (fromDebounceRef.current) clearTimeout(fromDebounceRef.current);
     fromDebounceRef.current = setTimeout(async () => {
       if (text.length > 1) {
         try {
           const results = await olaService.search(text);
-          console.log('handlefromchange', results);
-
           setFromSuggestions(results);
-        } catch (error) {
-        }
+          setShowFromSuggestions(true);
+        } catch (error) { }
       } else {
         setFromSuggestions([]);
+        setShowFromSuggestions(false);
       }
     }, 300);
   };
 
   const handleToChange = (text) => {
     setToQuery(text);
-    // Clear selected location when user types
     setSelectedTo(null);
-
     if (toDebounceRef.current) clearTimeout(toDebounceRef.current);
     toDebounceRef.current = setTimeout(async () => {
       if (text.length > 1) {
         try {
           const results = await olaService.search(text);
           setToSuggestions(results);
-        } catch (error) {
-        }
+          setShowToSuggestions(true);
+        } catch (error) { }
       } else {
         setToSuggestions([]);
+        setShowToSuggestions(false);
       }
     }, 300);
   };
 
-  // 🗺️ Fetch Ola route info + rides when both are selected
   const fetchRidesAndRoutes = async () => {
-    if (!selectedFrom?.geometry?.location || !selectedTo?.geometry?.location) {
-      return;
-    }
-
+    if (!selectedFrom?.geometry?.location || !selectedTo?.geometry?.location) return;
     setLoading(true);
     setRides([]);
     setRoutes([]);
-
     try {
-      // Get current date in local format
-      const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-
-      // 1️⃣ Create search DTO with actual coordinates from Ola response
+      const currentDate = new Date().toISOString().split("T")[0];
       const searchDTO = {
         sourceLatitude: selectedFrom.geometry.location.lat,
         sourceLongitude: selectedFrom.geometry.location.lng,
@@ -99,13 +85,9 @@ export default function SearchRideScreen() {
         localDate: currentDate,
       };
 
-      // 2️⃣ Fetch rides from backend with searchDTO
       const ridesData = await getRides(searchDTO);
-      console.log('rides data is ', ridesData.data.data);
-
       setRides(ridesData.data.data);
 
-      // 3️⃣ Fetch routes from Ola Maps
       const origin = selectedFrom.geometry.location;
       const destination = selectedTo.geometry.location;
       const routesData = await olaService.getRoute(origin, destination);
@@ -131,14 +113,18 @@ export default function SearchRideScreen() {
           setSelectedFrom(item);
           setFromQuery(item.description);
           setFromSuggestions([]);
+          setShowFromSuggestions(false);
         } else {
           setSelectedTo(item);
           setToQuery(item.description);
           setToSuggestions([]);
+          setShowToSuggestions(false);
         }
       }}
     >
-      <Text style={styles.suggestionMain}>{item.structured_formatting?.main_text || item.description}</Text>
+      <Text style={styles.suggestionMain}>
+        {item.structured_formatting?.main_text || item.description}
+      </Text>
       {item.structured_formatting?.secondary_text && (
         <Text style={styles.suggestionSecondary}>
           {item.structured_formatting.secondary_text}
@@ -158,7 +144,6 @@ export default function SearchRideScreen() {
       <Text style={styles.rideSubtitle}>
         Date: {item.rideDate} | Time: {item.rideTime}
       </Text>
-
       <TouchableOpacity
         style={styles.viewButton}
         onPress={() => router.push(`/create-ride?id=${item.id}`)}
@@ -182,11 +167,11 @@ export default function SearchRideScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <ScrollView style={styles.container}>
-        <Text style={styles.title}>Search Rides</Text>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <Text style={styles.title}>Find Your Perfect Ride</Text>
 
-        {/* From */}
-        <View style={{ position: 'relative' }}>
+        {/* FROM */}
+        <View style={{ position: "relative", marginBottom: 15 }}>
           <Text style={styles.label}>From</Text>
           <View style={inputWithCross}>
             <TextInput
@@ -200,6 +185,7 @@ export default function SearchRideScreen() {
                 onPress={() => {
                   setFromQuery("");
                   setSelectedFrom(null);
+                  setShowFromSuggestions(false);
                 }}
                 style={clearButton}
               >
@@ -207,7 +193,7 @@ export default function SearchRideScreen() {
               </TouchableOpacity>
             )}
           </View>
-          {fromSuggestions.length > 0 && (
+          {showFromSuggestions && (
             <FlatList
               data={fromSuggestions}
               keyExtractor={(item, i) => item.place_id || i.toString()}
@@ -217,8 +203,8 @@ export default function SearchRideScreen() {
           )}
         </View>
 
-        {/* To */}
-        <View style={{ position: 'relative', marginTop: 10 }}>
+        {/* TO */}
+        <View style={{ position: "relative", marginBottom: 20 }}>
           <Text style={styles.label}>To</Text>
           <View style={inputWithCross}>
             <TextInput
@@ -232,6 +218,7 @@ export default function SearchRideScreen() {
                 onPress={() => {
                   setToQuery("");
                   setSelectedTo(null);
+                  setShowToSuggestions(false);
                 }}
                 style={clearButton}
               >
@@ -239,7 +226,7 @@ export default function SearchRideScreen() {
               </TouchableOpacity>
             )}
           </View>
-          {toSuggestions.length > 0 && (
+          {showToSuggestions && (
             <FlatList
               data={toSuggestions}
               keyExtractor={(item, i) => item.place_id || i.toString()}
@@ -249,53 +236,43 @@ export default function SearchRideScreen() {
           )}
         </View>
 
-        <Button onPress={fetchRidesAndRoutes}> search </Button>
+        <TouchableOpacity style={styles.submitButton} onPress={fetchRidesAndRoutes}>
+          <Text style={styles.submitText}>Search Ride</Text>
+        </TouchableOpacity>
 
-        {/* Results */}
+        {/* RESULTS */}
         {loading ? (
           <ActivityIndicator size="large" color="#0051a8" style={{ marginTop: 30 }} />
         ) : (
           <>
             {rides.length > 0 && (
-              <FlatList
-                data={rides}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={renderRideCard}
-                contentContainerStyle={{ paddingBottom: 20 }}
-              />
+              <>
+                <Text style={styles.sectionHeader}>Available Rides</Text>
+                <FlatList
+                  data={rides}
+                  keyExtractor={(item) => item.id.toString()}
+                  renderItem={renderRideCard}
+                  contentContainerStyle={{ paddingBottom: 20 }}
+                />
+              </>
             )}
-            {selectedFrom && selectedTo && rides.length === 0 && (
+            {selectedFrom && selectedTo && rides.length === 0 && !loading && (
               <Text style={styles.noRideText}>No rides found for this route</Text>
             )}
           </>
         )}
 
-        {/* Route Info */}
+        {/* ROUTES */}
         {routes.length > 0 && (
           <>
-            <Text style={[styles.label, { marginTop: 20 }]}>Suggested Routes</Text>
-            <Text> { routes.length } </Text>
-            {
-              routes.map((r) => {
-                return (
-                  <View>
-                    <Text style={styles.routeTitle}>Route {r.id}</Text>
-                    <Text style={styles.routeSubtitle}>
-                      Distance: {(r.legs?.[0]?.distance / 1000).toFixed(1)} km
-                    </Text>
-                    <Text style={styles.routeSubtitle}>
-                      Duration: {(r.legs?.[0]?.duration / 60).toFixed(0)} min
-                    </Text>
-                  </View>
-                );
-              })
-            }
+            <Text style={styles.sectionHeader}>Suggested Routes</Text>
             <FlatList
               horizontal
               data={routes}
               renderItem={renderRouteCard}
               keyExtractor={(_, i) => i.toString()}
-              style={{ marginTop: 8 }}
+              style={{ marginTop: 10 }}
+              showsHorizontalScrollIndicator={false}
             />
           </>
         )}
@@ -306,16 +283,24 @@ export default function SearchRideScreen() {
 
 // ---------- Styles ----------
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", padding: 20 },
-  title: { fontSize: 22, fontWeight: "700", color: "#333", marginBottom: 10 },
-  label: { fontSize: 14, fontWeight: "600", color: "#555", marginTop: 10 },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 10,
-    marginTop: 6,
-    marginBottom: 4,
+  container: {
+    flex: 1,
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 18,
+    paddingVertical: 20,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#003366",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 5,
   },
   dropdown: {
     position: "absolute",
@@ -328,12 +313,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 4,
     shadowColor: "#000",
+    shadowOpacity: 0.08,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
     zIndex: 1000,
-    maxHeight: 150,
+    maxHeight: 300,
   },
   dropdownItem: {
     padding: 10,
@@ -350,16 +335,36 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 2,
   },
-  rideCard: {
-    backgroundColor: "#f9f9f9",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 10,
+  submitButton: {
+    marginTop: 20,
+    backgroundColor: "#0051a8",
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center",
   },
-  rideTitle: { fontSize: 16, fontWeight: "700", color: "#333" },
-  rideSubtitle: { fontSize: 13, color: "#555", marginTop: 3 },
+  submitText: { color: "#fff", fontWeight: "600", fontSize: 15 },
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#222",
+    marginTop: 25,
+    marginBottom: 8,
+  },
+  rideCard: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 14,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: "#e6e6e6",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  rideTitle: { fontSize: 16, fontWeight: "700", color: "#0051a8" },
+  rideSubtitle: { fontSize: 13, color: "#555", marginTop: 4 },
   viewButton: {
     backgroundColor: "#0051a8",
     paddingVertical: 8,
@@ -375,14 +380,19 @@ const styles = StyleSheet.create({
     color: "#888",
   },
   routeCard: {
-    backgroundColor: "#f9f9f9",
-    padding: 12,
-    borderRadius: 10,
-    marginRight: 10,
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 12,
+    marginRight: 12,
     borderWidth: 1,
     borderColor: "#ddd",
-    width: 160,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 4,
+    elevation: 3,
+    width: 170,
   },
-  routeTitle: { fontSize: 15, fontWeight: "600", color: "#333" },
-  routeSubtitle: { fontSize: 13, color: "#555" },
+  routeTitle: { fontSize: 15, fontWeight: "700", color: "#0051a8" },
+  routeSubtitle: { fontSize: 13, color: "#444", marginTop: 3 },
 });
