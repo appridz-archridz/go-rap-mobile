@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Camera, CameraView } from "expo-camera";
 import { router } from "expo-router";
@@ -13,12 +13,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Button, Snackbar } from "react-native-paper";
-import { useDispatch } from "react-redux";
+import { Button, Snackbar, TextInput } from "react-native-paper";
+import { useDispatch, useSelector } from "react-redux";
 import { AuthService } from "../../components/services/authService";
+import { uploadMedia } from "../../components/services/cloudinary";
 import { useSnackbar } from "../../components/ui/SnackbarProvider";
 import { logout } from "../../redux/authSlice";
 import { HelperService } from "../../services/helper-service";
+import { inputField } from './../../global-css';
 
 export default function ProfileScreen() {
   const [user, setUser] = useState({
@@ -38,11 +40,15 @@ export default function ProfileScreen() {
   const [showCamera, setShowCamera] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
   const [isEditable, setIsEditable] = useState(false);
+  const selector = useSelector((state) => state.auth);
 
   const handleEditProfile = () => {
     setIsEditable(true);
-    Alert.alert("Edit Profile", "This feature will be implemented soon!");
   };
+
+  const handleResetPassword = () => {
+    router.push("/reset-password");
+  }
 
   const handleLogout = () => {
     dispatch(logout());
@@ -51,16 +57,32 @@ export default function ProfileScreen() {
     setIsSnackbarVisible(true);
     snackbar.show("success", "Logged out successfully");
     console.log('Logout succesfull!!!');
-    
+
     router.replace("/login");
   };
 
+  const updateProfile = async () => {
+    try {
+      const payload = {
+        id: selector.userId,
+        ...(user.name && { userName: user.name }),
+        ...(user.email && { email: user.email }),
+        ...(user.phone && { phoneNumber: user.phone }),
+        ...(capturedImage && { profilePic: capturedImage })
+      }
+      console.log('user name', payload);
+      const response = await AuthService.updateProfile(payload);
+    } catch (err) {
+      console.log('Error while loading');
+    }
+  }
+
   useEffect(() => {
-    AuthService.getProfileInfo().then((response) => {
-      setUser(response.data.data);
-    }).catch((error) => {
-      console.error(error);
-    });
+    // AuthService.getProfileInfo().then((response) => {
+    //   setUser(response.data.data);
+    // }).catch((error) => {
+    //   console.error(error);
+    // });
   }, []);
 
   const openCamera = async () => {
@@ -84,11 +106,39 @@ export default function ProfileScreen() {
   };
 
   const takePicture = async () => {
-    if (cameraRef.current) {
-      const photo = await cameraRef.current.takePictureAsync();
+    try {
+      if (!cameraRef.current) {
+        console.log("Camera reference not found.");
+        return;
+      }
+
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.8,
+        base64: false,
+      });
+
       setCapturedImage(photo.uri);
       setShowCamera(false);
       setIsImageVerified(false);
+
+      const file = {
+        uri: photo.uri,
+        name: `photo_${Date.now()}.jpg`,
+        type: "image/jpeg",
+      };
+
+      const response = await uploadMedia(file.uri, file.type);
+
+      if (response?.success || response?.url) {
+        setCapturedImage(response.url);
+        setIsImageVerified(true);
+      } else {
+        alert("Image upload failed. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error in takePicture():", error);
+      alert("An error occurred while taking or uploading the picture.");
+    } finally {
     }
   };
 
@@ -100,98 +150,73 @@ export default function ProfileScreen() {
       icon: "car-outline",
       onPress: () => router.push("/my-ride"),
     },
-    {
-      id: 2,
-      title: "Payment Methods",
-      subtitle: "Manage your payment options",
-      icon: "card-outline",
-      onPress: () => Alert.alert("Payment Methods", "Feature coming soon!"),
-    },
   ];
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollContainer}>
-        <View style={styles.profileSection}>
+        {(!showCamera && <View style={styles.profileSection}>
+
+          <View style={styles.profileImageContainer}>
+            <Image
+              source={{
+                uri:
+                  capturedImage ||
+                  "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=150&q=80",
+              }}
+              style={styles.profileImage}
+            />
+            {
+              isEditable &&
+              <TouchableOpacity style={styles.editImageButton} onPress={openCamera}>
+                <Ionicons name="camera" size={16} color="white" />
+              </TouchableOpacity>
+            }
+          </View>
+
           {
-            !showCamera && (
-              <View style={styles.profileImageContainer}>
-                <Image
-                  source={{
-                    uri:
-                      capturedImage ||
-                      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=150&q=80",
-                  }}
-                  style={styles.profileImage}
-                />
-                {
-                  isEditable &&
-                  <TouchableOpacity style={styles.editImageButton} onPress={openCamera}>
-                    <Ionicons name="camera" size={16} color="white" />
-                  </TouchableOpacity>
-                }
+            isEditable && (
+              <TextInput
+                style={inputField}
+                placeholder="Full Name"
+                placeholderTextColor="gray"
+                autoCapitalize="words"
+                value={user.name}
+                onChangeText={(text) => setUser({ ...user, name: text })}
+              />
+            )
+          }
+
+          {
+            !isEditable && (
+              <View>
+                <Text style={styles.userName}>{user.name}</Text>
+                <Text style={styles.userEmail}>{user.email}</Text>
+                <Text style={styles.userPhone}>{user.phone}</Text>
               </View>
             )
           }
-          {showCamera && (
-            <View style={styles.cameraContainer}>
-              <CameraView
-                style={styles.camera}
-                facing={cameraFacing}
-                ref={cameraRef}
-                ratio="16:9"
-                flashMode="on"
-                autoFocus="on"
-                whiteBalance="auto"
-              />
-              <View style={styles.cameraControls}>
-                <Button
-                  title="Capture"
-                  onPress={takePicture}
-                  color="#007AFF"
-
-                >
-                  <Ionicons name="camera" size={30} color="white" />
-                </Button>
-
-                <Button
-                  title="Close"
-                  onPress={closeCamera}
-                  color="#FF3B30"
-                >
-                  <Ionicons name="close" size={30} color="white" />
-                </Button>
-
-                <Button
-                  title="Flip"
-                  onPress={
-                    () =>
-                      setCameraFacing(
-                        cameraFacing === "front" ? "back" : "front"
-                      )
-                  }
-                  color="#34C759"
-                >
-                  <Ionicons name="refresh" size={30} color="white" />
-                </Button>
-              </View>
-            </View>
-          )}
-
-          <Text style={styles.userName}>{user.name}</Text>
-          <Text style={styles.userEmail}>{user.email}</Text>
 
           <TouchableOpacity
             style={styles.editProfileButton}
             onPress={handleEditProfile}
           >
-            <Ionicons name="create-outline" size={20} color="#007AFF" />
-            <Text style={styles.editProfileText}>Edit Profile</Text>
+            {
+              isEditable &&
+              <Text style={styles.editProfileText} onPress={updateProfile} >Save Changes</Text>
+            }
+            {
+              !isEditable &&
+              <View style={{display: "flex", flexDirection: "row", alignItems: "center"}}>
+                <Ionicons name="create-outline" size={20} color="#007AFF" />
+                <Text style={styles.editProfileText}>Edit Profile</Text>
+              </View>
+            }
           </TouchableOpacity>
-        </View>
+        </View>)}
 
         {/* Stats Section */}
-        <View style={styles.statsContainer}>
+        {(!showCamera && <View style={styles.statsContainer}>
           <View style={styles.statItem}>
             <Text style={styles.statNumber}>{user.ridesCreated || 0}</Text>
             <Text style={styles.statLabel}>Rides Created</Text>
@@ -209,10 +234,10 @@ export default function ProfileScreen() {
             </View>
             <Text style={styles.statLabel}>Rating</Text>
           </View>
-        </View>
+        </View>)}
 
         {/* Menu Items */}
-        <View style={styles.menuContainer}>
+        {(!showCamera && <View style={styles.menuContainer}>
           {menuItems.map((item) => (
             <TouchableOpacity
               key={item.id}
@@ -229,22 +254,73 @@ export default function ProfileScreen() {
               <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
             </TouchableOpacity>
           ))}
-        </View>
+        </View>)}
+
+        {showCamera && (
+          <View style={styles.cameraContainer}>
+            <CameraView
+              style={styles.camera}
+              facing={cameraFacing}
+              ref={cameraRef}
+              ratio="16:9"
+              flashMode="on"
+              autoFocus="on"
+              whiteBalance="auto"
+            />
+            <View style={styles.cameraControls}>
+              <Button
+                title="Close"
+                onPress={closeCamera}
+                color="#FF3B30"
+              >
+                <Ionicons name="close" size={30} color="white" />
+              </Button>
+
+              <Button
+                title="Capture"
+                onPress={takePicture}
+                color="#007AFF"
+
+              >
+                <Ionicons name="camera" size={30} color="white" />
+              </Button>
+
+              <Button
+                title="Flip"
+                onPress={
+                  () =>
+                    setCameraFacing(
+                      cameraFacing === "front" ? "back" : "front"
+                    )
+                }
+                color="#34C759"
+              >
+                <Ionicons name="refresh" size={30} color="white" />
+              </Button>
+            </View>
+          </View>
+        )}
+
+        {/* reset password button */}
+        {(!showCamera && <TouchableOpacity style={styles.resetPasswordButton} onPress={handleResetPassword}>
+          <FontAwesome name="lock" size={24} color="#007AFF" />
+          <Text style={styles.resetPasswordText}>Reset Password</Text>
+        </TouchableOpacity>)}
 
         {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        {(!showCamera && <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#FF3B30" />
           <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+        </TouchableOpacity>)}
 
-        <Text style={styles.versionText}>Version 1.0.0</Text>
+        {(!showCamera && <Text style={styles.versionText}>Version 1.0.0</Text>)}
 
-        <Snackbar
+        {(!showCamera && <Snackbar
           visible={isSnackbarVisible}
           onDismiss={() => setIsSnackbarVisible(false)}
           duration={3000}
           style={styles.snackbar}
-        />
+        />)}
       </ScrollView>
     </SafeAreaView>
   );
@@ -258,10 +334,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 24,
     marginBottom: 16,
-  },
-  cameraContainer: {
-    width: "100%",
-    height: "95%",
   },
   profileImageContainer: { position: "relative", marginBottom: 16 },
   profileImage: {
@@ -342,6 +414,24 @@ const styles = StyleSheet.create({
   menuContent: { flex: 1 },
   menuTitle: { fontSize: 16, fontWeight: "600", color: "#333", marginBottom: 2 },
   menuSubtitle: { fontSize: 13, color: "#666" },
+  resetPasswordButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#007AFF",
+  },
+  resetPasswordText: {
+    marginLeft: 8,
+    color: "#007AFF",
+    fontWeight: "600",
+    fontSize: 16,
+  },
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -357,34 +447,38 @@ const styles = StyleSheet.create({
   logoutText: { marginLeft: 8, color: "#FF3B30", fontWeight: "600", fontSize: 16 },
   versionText: { textAlign: "center", color: "#999", fontSize: 12, marginBottom: 20 },
 
-  // 👇 Added camera styles
-  cameraWrapper: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "#000",
-    justifyContent: "flex-end",
+  cameraContainer: {
+    flex: 1,
     width: '100%',
-    height: '100vh',
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  camera: { flex: 1 },
+
+  camera: {
+    width: '100%',
+    aspectRatio: 9 / 18,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+
   cameraControls: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
-    padding: 10,
+    position: 'absolute',
+    bottom: 40,
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    paddingVertical: 10,
   },
-  captureButton: {
-    backgroundColor: "#007AFF",
-    padding: 16,
+
+  controlButton: {
+    backgroundColor: '#007AFF',
+    padding: 14,
     borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  closeButton: {
-    backgroundColor: "red",
-    padding: 16,
-    borderRadius: 50,
-  },
+
 });

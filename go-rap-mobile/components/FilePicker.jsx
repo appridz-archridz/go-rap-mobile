@@ -111,11 +111,7 @@ const FilePicker = ({ onFileSelected, disabled }) => {
           </View>
         ) : (
           <View style={styles.input}>
-            <RNImage
-              source={require('../assets/images/upload-img.png')}
-              style={styles.uploadIcon}
-              accessibilityLabel="Upload image icon"
-            />
+            <FontAwesome name="image" size={24} color={theme.text} style={styles.uploadIcon} accessibilityLabel="Upload image icon" />
             <Text style={styles.placeholder}>Tap to upload media</Text>
           </View>
         )}

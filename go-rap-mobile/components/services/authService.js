@@ -16,8 +16,13 @@ const getProfileInfo = () => {
   return api.get(`${AUTH_BASE_URL}/profile`);
 }
 
+const updateProfile = (payload) => {
+  return api.put(`${AUTH_BASE_URL}/update-profile`, payload);
+}
+
 export const AuthService = {
   login,
   signUp,
   getProfileInfo,
+  updateProfile,
 };
