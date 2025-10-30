@@ -86,18 +86,18 @@ const Login = () => {
 
   const handleLogin = async () => {
     if (!validate()) return;
-    
+
     const payLoad = {
       usernameOrEmail: form.email,
       password: form.password,
     };
-    
+
     try {
       const { data } = await AuthService.login(payLoad);
       const token = data.data?.token;
-      
+
       if (data.statusCode === "200 OK") {
-        
+
         const stateData = {
           token: token,
           userId: data.data.id,
@@ -201,13 +201,28 @@ const Login = () => {
 
           </View>
 
-          {/* Forgot Password */}
-          <TouchableOpacity
-            style={styles.forgotPasswordButton}
-            onPress={handleForgotPassword}
-          >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
+          <View style={{display: 'flex', flexDirection: 'row', justifyContent: 'space-between'}}>
+            {/* reset password */}
+            <TouchableOpacity
+              style={styles.forgotPasswordButton}
+              onPress={() => {
+                router.push("/forgot-password");
+              }}
+            >
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
+
+            {/* Forgot Password */}
+            <TouchableOpacity
+              style={styles.forgotPasswordButton}
+              onPress={() => {
+                router.push("/reset-password");
+              }}
+            >
+              <Text style={styles.forgotPasswordText}>Reset Password?</Text>
+            </TouchableOpacity>
+          </View>
+
 
           {/* Login Button */}
           <PressableButton disabled={!form.email || !form.password} onPress={handleLogin} text="Log in" />

@@ -79,8 +79,6 @@ const SignUp2 = () => {
     return allValid;
   };
 
-
-
   const getDeviceInfo = async () => {
     const deviceId = Device.osName === 'iOS'
       ? await Application.getIosIdForVendorAsync()
