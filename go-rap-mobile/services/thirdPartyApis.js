@@ -1,13 +1,10 @@
 import axios from "axios";
+import CONFIG from "../config.json";
 
-// ===========================================================
-// 🔑 Ola Maps API Configuration
-// ===========================================================
-
-const OLA_MAPS_API_KEY = "HRBo0B7JB5uVwarO5Whtor1a3dVGVWtjoX0yutE3";
-const OLA_MAPS_PROJECT_ID = "77890f6e-aaa9-42ca-8a9d-be196c5c8b12";
-const OLA_MAPS_AUTOCOMPLETE_BASE_URL = "https://api.olamaps.io/places/v1/autocomplete";
-const OLA_MAPS_DIRECTIONS_BASE_URL = "https://api.olamaps.io/routing/v1/directions";
+const OLA_MAPS_API_KEY = CONFIG.OLA_MAPS_API_KEY;
+const OLA_MAPS_PROJECT_ID = CONFIG.OLA_MAPS_PROJECT_ID;
+const OLA_MAPS_AUTOCOMPLETE_BASE_URL = CONFIG.OLA_MAPS_AUTOCOMPLETE_BASE_URL;
+const OLA_MAPS_DIRECTIONS_BASE_URL = CONFIG.OLA_MAPS_DIRECTIONS_BASE_URL;
 
 export const olaService = {
   // 🧭 Autocomplete (Place Search)
