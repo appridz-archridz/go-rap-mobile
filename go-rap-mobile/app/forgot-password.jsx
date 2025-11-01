@@ -6,14 +6,16 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  ActivityIndicator,
 } from "react-native";
 import { inputField } from "../global-css";
+import { forgotPassword } from '../components/services/authService';// Import your API function
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const validateEmail = (value) => {
     if (!value) return "Email is required";
@@ -21,42 +23,37 @@ export default function ForgotPassword() {
     return "";
   };
 
-  const handleSendReset = () => {
+  const handleSendOtp = async () => {
     const validationError = validateEmail(email);
     if (validationError) {
       setError(validationError);
       return;
     }
+
     setError("");
-    setIsSubmitted(true);
-    console.log("Reset password for:", email);
+    setLoading(true);
+
+    try {
+    
+      await forgotPassword(email);
+      // Navigate to OTP verification page with email
+      router.push({
+        pathname: "/verify-otp",
+        params: { email },
+      });
+    } catch (err) {
+      setError(
+        err.response?.data?.message || 
+        "Failed to send OTP. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleBackToLogin = () => {
     router.push("/login");
   };
-
-  if (isSubmitted) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.successContainer}>
-          <Text style={styles.successTitle}>Check Your Email</Text>
-          <Text style={styles.successText}>
-            We have sent a password reset link to{"\n"}
-            <Text style={styles.emailText}>{email}</Text>
-          </Text>
-          <TouchableOpacity style={styles.button} onPress={handleBackToLogin}>
-            <Text style={styles.buttonText}>Back to Login</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.linkButton} onPress={handleSendReset}>
-            <Text style={styles.linkButtonText}>
-              Did not receive email? Resend
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <ScrollView
@@ -69,7 +66,7 @@ export default function ForgotPassword() {
       <View style={styles.forgotContainer}>
         <Text style={styles.forgotTitle}>Forgot Password?</Text>
         <Text style={styles.forgotSubtitle}>
-          No worries! Enter your email address and we will send you a reset link.
+          No worries! Enter your email address and we will send you a verification code.
         </Text>
 
         {/* Email input */}
@@ -86,13 +83,22 @@ export default function ForgotPassword() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            editable={!loading}
           />
         </View>
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        {/* Buttons */}
-        <TouchableOpacity style={styles.button} onPress={handleSendReset}>
-          <Text style={styles.buttonText}>Send Reset Link</Text>
+        {/* Send OTP Button */}
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleSendOtp}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Send Verification Code</Text>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.linkButton} onPress={handleBackToLogin}>
@@ -139,6 +145,9 @@ const styles = StyleSheet.create({
     marginTop: 20,
     width: "100%",
   },
+  buttonDisabled: {
+    backgroundColor: "#A0C4E8",
+  },
   buttonText: {
     color: "#fff",
     fontSize: 16,
@@ -147,25 +156,4 @@ const styles = StyleSheet.create({
   },
   linkButton: { marginTop: 16 },
   linkButtonText: { color: "#0057D9", fontSize: 14, fontWeight: "600" },
-  successContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#000",
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  successText: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 22,
-  },
-  emailText: { fontWeight: "600", color: "#0057D9" },
 });
