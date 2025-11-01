@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
     ScrollView,
@@ -10,29 +10,30 @@ import {
     Image,
     KeyboardAvoidingView,
     Platform,
+    ActivityIndicator,
 } from "react-native";
 import { inputField } from "../global-css";
 import { useSelector } from "react-redux";
+import { updatePassword } from '../components/services/authService';
 
 const eyeOpen = require("../assets/images/eye-open.png");
 const eyeClosed = require("../assets/images/eye-closed.png");
 
 export default function ResetPassword() {
-    const [oldPassword, setOldPassword] = useState("");
+    const params = useLocalSearchParams();
+    const email = params.email;
+    const fromOtp = params.fromOtp === "true";
+
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [errors, setErrors] = useState({});
-    const [showOldPassword, setShowOldPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
     const selector = useSelector((state) => state.auth);
 
     const validateField = (field, value) => {
         let message = "";
-
-        if (field === "oldPassword" && !value) {
-            message = "Old password is required";
-        }
 
         if (field === "newPassword") {
             if (!value) message = "New password is required";
@@ -46,15 +47,16 @@ export default function ResetPassword() {
         }
 
         setErrors((prev) => ({ ...prev, [field]: message }));
+        return message === "";
     };
 
     const validate = () => {
-        const fields = { oldPassword, newPassword, confirmPassword };
+        const fields = { newPassword, confirmPassword };
         let allValid = true;
 
         Object.entries(fields).forEach(([field, value]) => {
-            validateField(field, value);
-            if (errors[field] || !value) allValid = false;
+            const isValid = validateField(field, value);
+            if (!isValid) allValid = false;
         });
 
         return allValid;
@@ -62,12 +64,21 @@ export default function ResetPassword() {
 
     const handleReset = async () => {
         if (!validate()) return;
-        console.log("Password reset initiated:", {
-            oldPassword,
-            newPassword,
-            confirmPassword,
-        });
-        router.push("/login");
+
+        setLoading(true);
+
+        try {
+            await updatePassword(email, newPassword);
+            // Show success and navigate to login
+            router.push("/login");
+        } catch (err) {
+            setErrors((prev) => ({
+                ...prev,
+                general: err.response?.data?.message || "Failed to update password. Please try again.",
+            }));
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleBackToLogin = () => {
@@ -83,43 +94,20 @@ export default function ResetPassword() {
                 style={styles.container}
                 contentContainerStyle={styles.contentContainer}
             >
-                {/* Back button (optional placeholder, same layout position) */}
-                <TouchableOpacity style={styles.backButton} onPress={handleBackToLogin} />
+                {/* Back button */}
+                {!selector.isAuthenticated && (
+                    <TouchableOpacity style={styles.backButton} onPress={handleBackToLogin} />
+                )}
 
                 <View style={styles.resetContainer}>
-                    <Text style={styles.title}>Reset Password</Text>
-                    <Text style={styles.subtitle}>
-                        Enter your current password and create a new one.
+                    <Text style={styles.title}>
+                        {fromOtp ? "Create New Password" : "Reset Password"}
                     </Text>
-
-                    {/* Old Password */}
-                    <View style={styles.inputContainer}>
-                        <View style={styles.inputWrapper}>
-                            <TextInput
-                                style={[inputField, styles.input]}
-                                placeholder="Enter old password"
-                                placeholderTextColor="#999"
-                                secureTextEntry={!showOldPassword}
-                                value={oldPassword}
-                                onChangeText={(text) => {
-                                    setOldPassword(text);
-                                    validateField("oldPassword", text);
-                                }}
-                            />
-                            <TouchableOpacity
-                                style={styles.eyeButton}
-                                onPress={() => setShowOldPassword((prev) => !prev)}
-                            >
-                                <Image
-                                    source={showOldPassword ? eyeClosed : eyeOpen}
-                                    style={styles.eyeIcon}
-                                />
-                            </TouchableOpacity>
-                        </View>
-                        {errors.oldPassword && (
-                            <Text style={styles.errorText}>{errors.oldPassword}</Text>
-                        )}
-                    </View>
+                    <Text style={styles.subtitle}>
+                        {fromOtp
+                            ? "Please create a strong password for your account."
+                            : "Enter a new password for your account."}
+                    </Text>
 
                     {/* New Password */}
                     <View style={styles.inputContainer}>
@@ -132,8 +120,10 @@ export default function ResetPassword() {
                                 value={newPassword}
                                 onChangeText={(text) => {
                                     setNewPassword(text);
-                                    validateField("newPassword", text);
+                                    if (errors.newPassword) validateField("newPassword", text);
                                 }}
+                                onBlur={() => validateField("newPassword", newPassword)}
+                                editable={!loading}
                             />
                             <TouchableOpacity
                                 style={styles.eyeButton}
@@ -161,8 +151,10 @@ export default function ResetPassword() {
                                 value={confirmPassword}
                                 onChangeText={(text) => {
                                     setConfirmPassword(text);
-                                    validateField("confirmPassword", text);
+                                    if (errors.confirmPassword) validateField("confirmPassword", text);
                                 }}
+                                onBlur={() => validateField("confirmPassword", confirmPassword)}
+                                editable={!loading}
                             />
                             <TouchableOpacity
                                 style={styles.eyeButton}
@@ -179,17 +171,29 @@ export default function ResetPassword() {
                         )}
                     </View>
 
+                    {/* General Error */}
+                    {errors.general && (
+                        <Text style={styles.errorText}>{errors.general}</Text>
+                    )}
+
                     {/* Submit Button */}
-                    <TouchableOpacity style={styles.button} onPress={handleReset}>
-                        <Text style={styles.buttonText}>Update Password</Text>
+                    <TouchableOpacity
+                        style={[styles.button, loading && styles.buttonDisabled]}
+                        onPress={handleReset}
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.buttonText}>Update Password</Text>
+                        )}
                     </TouchableOpacity>
 
-                    {
-                        !selector.isAuthenticated &&
+                    {!selector.isAuthenticated && (
                         <TouchableOpacity style={styles.linkButton} onPress={handleBackToLogin}>
                             <Text style={styles.linkButtonText}>Back to Login</Text>
                         </TouchableOpacity>
-                    }
+                    )}
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>
@@ -235,6 +239,9 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginTop: 20,
         width: "100%",
+    },
+    buttonDisabled: {
+        backgroundColor: "#A0C4E8",
     },
     buttonText: {
         color: "#fff",

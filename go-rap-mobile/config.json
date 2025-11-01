@@ -1,8 +1,8 @@
 {
-  "BACKEND_RENDER": "DUMMY",
-  "BACKEND_PRAVEEN": "DUMMY",
-  "BACKEND_RANADEEP": "DUMMY",
-  "BACKEND_AKHIL": "",
-  "OLA_MAPS_API_KEY": "DUMMY",
-  "OLA_MAPS_PROJECT_ID": "DUMMY"
+  "BACKEND_RENDER": "https://ride-service-mo73.onrender.com/gorap",
+  "BACKEND_PRAVEEN": "http://192.168.0.12:8077/gorap/",
+  "BACKEND_RANADEEP": "http://192.168.29.72:8077/gorap/",
+  "BACKEND_AKHIL": "http://192.168.0.14:8077/gorap/",
+  "OLA_MAPS_API_KEY": "HRBo0B7JB5uVwarO5Whtor1a3dVGVWtjoX0yutE3",
+  "OLA_MAPS_PROJECT_ID": "77890f6e-aaa9-42ca-8a9d-be196c5c8b12"
 }
