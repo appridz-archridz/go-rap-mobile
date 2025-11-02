@@ -21,7 +21,7 @@ export const SnackbarProvider = ({ children }) => {
   const icons = {
     "": "",
     success: "check-circle",
-    error: "times-circle",
+    error: "exclamation-triangle",
   }
 
   const hide = () => setVisible(false);
