@@ -2,18 +2,18 @@ import { FontAwesome } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Image,
-    Linking,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Image,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { getRideById } from "../../services/ride-service";
+import { getRideById } from "../services/ride-service";
 
 export default function RideDetailsScreen() {
   const params = useLocalSearchParams();
@@ -22,9 +22,30 @@ export default function RideDetailsScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
+  // Extract id once to prevent re-renders
+  const rideId = params.id;
+
   useEffect(() => {
-    fetchRideDetails();
-  }, []);
+    console.log("inside results page:", { id: rideId });
+    console.log("params : ", { id: rideId });
+    
+    const fetchRideDetails = async () => {
+      try {
+        setLoading(true);
+        const response = await getRideById(rideId);
+        setRideDetails(response.data.data);
+      } catch (error) {
+        Alert.alert("Error", "Failed to fetch ride details");
+        router.back();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (rideId) {
+      fetchRideDetails();
+    }
+  }, [rideId]); // Only depend on rideId, not the entire params object
 
   useEffect(() => {
     if (rideDetails) {
@@ -42,20 +63,7 @@ export default function RideDetailsScreen() {
         }),
       ]).start();
     }
-  }, [rideDetails]);
-
-  const fetchRideDetails = async () => {
-    try {
-      setLoading(true);
-      const response = await getRideById(params.id);
-      setRideDetails(response.data.data);
-    } catch (error) {
-      Alert.alert("Error", "Failed to fetch ride details");
-      router.back();
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [rideDetails, fadeAnim, slideAnim]); // Add all dependencies
 
   const handleCall = () => {
     if (rideDetails?.phoneNumber) {
@@ -226,16 +234,12 @@ export default function RideDetailsScreen() {
           </View>
 
           {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity style={styles.bookButton}>
-              <FontAwesome name="check-circle" size={20} color="#fff" />
-              <Text style={styles.bookButtonText}>Book This Ride</Text>
-            </TouchableOpacity>
+          {/* <View style={styles.actionButtons}>
             <TouchableOpacity style={styles.shareButton}>
               <FontAwesome name="share-alt" size={18} color="#0051a8" />
               <Text style={styles.shareButtonText}>Share</Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
         </Animated.View>
       </ScrollView>
     </View>
