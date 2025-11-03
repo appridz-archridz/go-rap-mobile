@@ -13,8 +13,8 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
-import { persistor, store } from "../redux/store";
 import { SnackbarProvider } from "../components/ui/SnackbarProvider";
+import { persistor, store } from "../redux/store";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -64,8 +64,11 @@ export default function RootLayout() {
                   <Stack.Screen name="PrivacyPolicy" options={screenOptions("Privacy Policy")} />
                   <Stack.Screen name="forgot-password" options={screenOptions("Forgot Password")} />
                   <Stack.Screen name="profile" options={screenOptions("Profile")} />
+                  <Stack.Screen name="reset-password" options={screenOptions("Reset Password")} />
                   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                   <Stack.Screen name="my-ride" options={screenOptions("My Rides")} />
+                  <Stack.Screen name="ride-details" options={{ headerShown: false }} />
+                  <Stack.Screen name="ride-results" options={{ headerShown: false }} />
                 </Stack>
                 {/* </ThemeProvider> */}
               </PersistGate>

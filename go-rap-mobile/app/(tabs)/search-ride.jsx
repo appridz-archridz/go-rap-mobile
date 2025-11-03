@@ -78,11 +78,11 @@ export default function SearchRideScreen() {
       toDescription: toQuery,
     };
 
-    router.push({
-      pathname: '/(tabs)/ride-results',
-      params: searchData
-    });
-  };
+  router.push({
+    pathname: '/ride-results',
+    params: searchData
+  });
+};
 
   const renderSuggestion = ({ item }) => (
     <TouchableOpacity

@@ -9,6 +9,7 @@ import {
   View
 } from 'react-native';
 import { uploadMedia } from './services/cloudinary';
+import { FontAwesome } from '@expo/vector-icons';
 
 // Theme object for maintainable colors (aligned with SignUp2)
 const theme = {
@@ -111,11 +112,7 @@ const FilePicker = ({ onFileSelected, disabled }) => {
           </View>
         ) : (
           <View style={styles.input}>
-            <RNImage
-              source={require('../assets/images/upload-img.png')}
-              style={styles.uploadIcon}
-              accessibilityLabel="Upload image icon"
-            />
+            <FontAwesome name="image" size={24} style={{ color: theme.text.secondary }} />
             <Text style={styles.placeholder}>Tap to upload media</Text>
           </View>
         )}
