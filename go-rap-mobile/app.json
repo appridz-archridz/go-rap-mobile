@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "go-rap-mobile",
-    "slug": "go-rap-mobile",
+    "name": "Go-RAP",
+    "slug": "Go-RAP",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/distance.png",
     "scheme": "gorapmobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,10 +13,15 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/distance.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.appridz.gorapmobile"
     },
     "web": {
       "bundler": "metro",
@@ -45,6 +50,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "18d88daf-0610-4062-ac11-186e20d29f88"
+      }
     }
   }
 }
