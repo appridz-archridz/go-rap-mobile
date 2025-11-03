@@ -22,6 +22,7 @@ const authSlice = createSlice({
       state.email = action.payload.email;
       state.phone = action.payload.phone;
       AsyncStorage.setItem("token", action.payload.token);
+      console.log('--- Message from authSlice - The login token and user details SET succesfully!!!');
     },
     logout: (state) => {
       state.isAuthenticated = false;
@@ -31,6 +32,7 @@ const authSlice = createSlice({
       state.email = null;
       state.phone = null;
       AsyncStorage.removeItem("token");
+      console.log('--- Message from authSlice - The login token and user details REMOVED succesfully!!!');
     },
   },
 });
