@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  SectionList,
   StyleSheet,
   Text,
   TextInput,
@@ -170,13 +171,15 @@ const CreateRideScreen = () => {
               )}
             </View>
             {showSourceSuggestions && (
-              <FlatList
-                data={sourceSuggestions}
-                keyExtractor={(item, i) => item.place_id || i.toString()}
-                renderItem={({ item }) => renderSuggestion(item, "source")}
-                style={styles.dropdown}
-              />
+              <ScrollView style={styles.dropdown}>
+                {sourceSuggestions.map((item, i) => (
+                  <View key={item.place_id || i.toString()}>
+                    {renderSuggestion(item, "source")}
+                  </View>
+                ))}
+              </ScrollView>
             )}
+
           </View>
 
           {/* Destination */}
@@ -196,12 +199,13 @@ const CreateRideScreen = () => {
               )}
             </View>
             {showDestinationSuggestions && (
-              <FlatList
-                data={destinationSuggestions}
-                keyExtractor={(item, i) => item.place_id || i.toString()}
-                renderItem={({ item }) => renderSuggestion(item, "destination")}
-                style={styles.dropdown}
-              />
+              <ScrollView style={styles.dropdown}>
+                {destinationSuggestions.map((item, i) => (
+                  <View key={item.place_id || i.toString()}>
+                    {renderSuggestion(item, "destination")}
+                  </View>
+                ))}
+              </ScrollView>
             )}
           </View>
 
@@ -245,7 +249,7 @@ const CreateRideScreen = () => {
           </TouchableOpacity> */}
 
           {/* Route List */}
-          <FlatList
+          {/* <FlatList
             data={routes}
             keyExtractor={item => item.id.toString()}
             scrollEnabled
@@ -260,7 +264,7 @@ const CreateRideScreen = () => {
                 <Text style={styles.routeInfo}>{item.distance} km • {item.duration} mins</Text>
               </TouchableOpacity>
             )}
-          />
+          /> */}
 
           {/* Create Ride */}
           <TouchableOpacity style={styles.submitBtn} onPress={handleCreateRide} disabled={loading}>

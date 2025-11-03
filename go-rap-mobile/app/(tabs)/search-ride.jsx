@@ -65,24 +65,24 @@ export default function SearchRideScreen() {
   };
 
   const handleSearchRide = () => {
-  if (!selectedFrom?.geometry?.location || !selectedTo?.geometry?.location) {
-    return;
-  }
+    if (!selectedFrom?.geometry?.location || !selectedTo?.geometry?.location) {
+      return;
+    }
 
-  const searchData = {
-    sourceLatitude: selectedFrom.geometry.location.lat.toString(),
-    sourceLongitude: selectedFrom.geometry.location.lng.toString(),
-    destinationLatitude: selectedTo.geometry.location.lat.toString(),
-    destinationLongitude: selectedTo.geometry.location.lng.toString(),
-    fromDescription: fromQuery,
-    toDescription: toQuery,
+    const searchData = {
+      sourceLatitude: selectedFrom.geometry.location.lat.toString(),
+      sourceLongitude: selectedFrom.geometry.location.lng.toString(),
+      destinationLatitude: selectedTo.geometry.location.lat.toString(),
+      destinationLongitude: selectedTo.geometry.location.lng.toString(),
+      fromDescription: fromQuery,
+      toDescription: toQuery,
+    };
+
+    router.push({
+      pathname: '/(tabs)/ride-results',
+      params: searchData
+    });
   };
-
-  router.push({
-    pathname: '/(tabs)/ride-results',
-    params: searchData
-  });
-};
 
   const renderSuggestion = ({ item }) => (
     <TouchableOpacity
@@ -141,14 +141,16 @@ export default function SearchRideScreen() {
             )}
           </View>
           {showFromSuggestions && (
-            <FlatList
-              data={fromSuggestions}
-              keyExtractor={(item, i) => item.place_id || i.toString()}
-              renderItem={renderSuggestion}
+            <ScrollView
               style={styles.dropdown}
               keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled
-            />
+            >
+              {fromSuggestions.map((item, i) => (
+                <View key={item.place_id || i.toString()}>
+                  {renderSuggestion({ item })}
+                </View>
+              ))}
+            </ScrollView>
           )}
         </View>
 
@@ -176,22 +178,24 @@ export default function SearchRideScreen() {
             )}
           </View>
           {showToSuggestions && (
-            <FlatList
-              data={toSuggestions}
-              keyExtractor={(item, i) => item.place_id || i.toString()}
-              renderItem={renderSuggestion}
+            <ScrollView
               style={styles.dropdown}
               keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled
-            />
+            >
+              {toSuggestions.map((item, i) => (
+                <View key={item.place_id || i.toString()}>
+                  {renderSuggestion({ item })}
+                </View>
+              ))}
+            </ScrollView>
           )}
         </View>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
             styles.submitButton,
             (!selectedFrom || !selectedTo) && styles.submitButtonDisabled
-          ]} 
+          ]}
           onPress={handleSearchRide}
           disabled={!selectedFrom || !selectedTo}
         >
@@ -272,10 +276,10 @@ const styles = StyleSheet.create({
   submitButtonDisabled: {
     backgroundColor: "#ccc",
   },
-  submitText: { 
-    color: "#fff", 
-    fontWeight: "600", 
-    fontSize: 15 
+  submitText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 15
   },
   recentSection: {
     marginTop: 40,
