@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Go-RAP",
-    "slug": "Go-RAP",
+    "slug": "go-rap-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/distance.png",
