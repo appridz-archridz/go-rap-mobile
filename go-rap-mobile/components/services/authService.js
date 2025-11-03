@@ -1,7 +1,7 @@
 import api from "../../services/interceptor-service";
 
-const AUTH_BASE_URL = "http://192.168.0.7:8077/gorap/api/auth";
-// const AUTH_BASE_URL = "https://ride-service-mo73.onrender.com/gorap/api/auth";
+// const AUTH_BASE_URL = "http://192.168.0.7:8077/gorap/api/auth";
+const AUTH_BASE_URL = "https://ride-service-mo73.onrender.com/gorap/api/auth";
 
 export const signUp = (payLoad) => {
   const response = api.post(`${AUTH_BASE_URL}/signup`, payLoad);

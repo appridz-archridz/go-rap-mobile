@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  SectionList,
   StyleSheet,
   Text,
   TextInput,
@@ -197,13 +198,15 @@ const CreateRideScreen = () => {
               )}
             </View>
             {showSourceSuggestions && (
-              <FlatList
-                data={sourceSuggestions}
-                keyExtractor={(item, i) => item.place_id}
-                renderItem={({ item }) => renderSuggestion(item, "source")}
-                style={styles.dropdown}
-              />
+              <ScrollView style={styles.dropdown}>
+                {sourceSuggestions.map((item, i) => (
+                  <View key={item.place_id || i.toString()}>
+                    {renderSuggestion(item, "source")}
+                  </View>
+                ))}
+              </ScrollView>
             )}
+
           </View>
 
           {/* Destination */}
@@ -223,12 +226,13 @@ const CreateRideScreen = () => {
               )}
             </View>
             {showDestinationSuggestions && (
-              <FlatList
-                data={destinationSuggestions}
-                keyExtractor={(item, i) => item.place_id}
-                renderItem={({ item }) => renderSuggestion(item, "destination")}
-                style={styles.dropdown}
-              />
+              <ScrollView style={styles.dropdown}>
+                {destinationSuggestions.map((item, i) => (
+                  <View key={item.place_id || i.toString()}>
+                    {renderSuggestion(item, "destination")}
+                  </View>
+                ))}
+              </ScrollView>
             )}
           </View>
 
@@ -265,6 +269,29 @@ const CreateRideScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* Get Routes */}
+          {/* <TouchableOpacity style={styles.fetchBtn} onPress={fetchRoutes} disabled={loading}>
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.fetchText}>Get Available Routes</Text>}
+          </TouchableOpacity> */}
+
+          {/* Route List */}
+          {/* <FlatList
+            data={routes}
+            keyExtractor={item => item.id.toString()}
+            scrollEnabled
+            nestedScrollEnabled
+            style={{ maxHeight: 250, marginTop: 10 }}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[styles.routeCard, selectedRoute?.id === item.id && styles.selectedRoute]}
+                onPress={() => setSelectedRoute(item)}
+              >
+                <Text style={styles.routeTitle}>{item.name}</Text>
+                <Text style={styles.routeInfo}>{item.distance} km • {item.duration} mins</Text>
+              </TouchableOpacity>
+            )}
+          /> */}
 
           {/* Create Ride */}
           <TouchableOpacity style={styles.submitBtn} onPress={handleCreateRide} disabled={loading}>
