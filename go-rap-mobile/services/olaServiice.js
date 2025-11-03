@@ -1,8 +1,9 @@
 import axios from "axios";
+import CONFIG from "../config.json";
 
 const OLA_BASE_URL = "https://api.olamaps.io/places/v1/autocomplete";
 const OLA_ROUTE_URL = "https://api.olamaps.io/routing/v1/directions";
-const OLA_API_KEY = "YOUR_OLA_MAPS_API_KEY";
+const OLA_API_KEY = CONFIG.OLA_MAPS_API_KEY;
 
 export const olaService = {
   // 🔍 Search autocomplete
