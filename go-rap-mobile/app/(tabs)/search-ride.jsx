@@ -79,7 +79,7 @@ export default function SearchRideScreen() {
   };
 
   router.push({
-    pathname: '/(tabs)/ride-results',
+    pathname: '/ride-results',
     params: searchData
   });
 };

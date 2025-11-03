@@ -11,8 +11,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { getRides } from "../../services/ride-service";
-import { olaService } from "../../services/thirdPartyApis";
+import { getRides } from "../services/ride-service";
+import { olaService } from "../services/thirdPartyApis";
 
 export default function RideResultsScreen() {
   const params = useLocalSearchParams();
@@ -131,17 +131,17 @@ export default function RideResultsScreen() {
           </Text>
         </View>
         <View style={styles.rideDetails}>
-          <View style={styles.detailRow}>
+          {/* <View style={styles.detailRow}>
             <FontAwesome name="user" size={14} color="#555" />
             <Text style={styles.rideSubtitle}>{item.driverName}</Text>
           </View>
           <View style={styles.detailRow}>
             <FontAwesome name="car" size={14} color="#555" />
             <Text style={styles.rideSubtitle}>{item.vehicleName}</Text>
-          </View>
+          </View> */}
           <View style={styles.detailRow}>
             <FontAwesome name="users" size={14} color="#555" />
-            <Text style={styles.rideSubtitle}>{item.availableSeats} seats available</Text>
+            <Text style={styles.rideSubtitle}>{item.availableSeats==1?`${item.availableSeats} seat available` :`${item.availableSeats} seats available`}</Text>
           </View>
           <View style={styles.detailRow}>
             <FontAwesome name="calendar" size={14} color="#555" />
@@ -152,7 +152,7 @@ export default function RideResultsScreen() {
         </View>
         <TouchableOpacity
           style={styles.viewButton}
-          onPress={() => router.push(`/create-ride?id=${item.id}`)}
+          onPress={() => router.push(`/ride-details?id=${item.id}`)}
         >
           <Text style={styles.viewButtonText}>View Details</Text>
           <FontAwesome name="arrow-right" size={14} color="#fff" />

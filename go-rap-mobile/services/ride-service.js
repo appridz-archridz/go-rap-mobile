@@ -12,16 +12,12 @@ export const RideService = {
   },
 };
 
-export const getLocations = async () => {
-  // simulate api call
-  return [
-    { id: "1", name: "Bangalore" },
-    { id: "2", name: "Chennai" },
-    { id: "3", name: "Hyderabad" },
-    { id: "4", name: "Mumbai" },
-  ];
-};
 
 export const getRides = async (searchDTO) => {
  return api.post(`${RIDE_BASE_URL}/search`, searchDTO);
 };
+
+export const getRideById = async (rideId) => {
+ return api.get(`${RIDE_BASE_URL}/get/${rideId}`);
+};
+
