@@ -51,6 +51,7 @@ const Welcome = () => {
                 </Text>
             </View>
             <PressableButton customStyles={customStyles} text="Get Started" onPress={GetStartedOnPress} />
+            <Text style={{ color: '#8C8D8BFF', textAlign: 'center', lineHeight: 28, padding: 25, fontFamily: 'work-sans-regular' }} >  Proudly Made in India 🇮🇳 </Text>
         </SafeAreaView>
     );
 }

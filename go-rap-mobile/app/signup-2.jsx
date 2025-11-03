@@ -79,8 +79,6 @@ const SignUp2 = () => {
     return allValid;
   };
 
-
-
   const getDeviceInfo = async () => {
     const deviceId = Device.osName === 'iOS'
       ? await Application.getIosIdForVendorAsync()
@@ -120,19 +118,17 @@ const SignUp2 = () => {
         deviceName: (await getDeviceInfo()).uniqueId,
       };
       
-      const response = await signUp(payload);
-
-      if (response && response?.data?.success) {
+      const { data } = (await signUp(payload));
+      
+      if (data && data?.success) {
         console.log('Done with signup');
         router.push('/login');
-        snackbar.show('success', 'Signup successful');
+        snackbar.show('success', data?.message || 'Signup successful.');
       } else {
-        snackbar.show('error', response?.message || 'Signup failed. Try again.');
+        snackbar.show('error', data?.message || 'Signup failed. Try again.');
       }
     } catch (error) {
-      const message = error?.response?.data?.message || error?.message || "Network error";
-      snackbar.show('error', response?.message || 'Signup failed. Try again.');
-
+      snackbar.show('error', error?.response?.data?.message || "Signup failed. Try again.");
     }
   };
 

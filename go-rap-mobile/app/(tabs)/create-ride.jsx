@@ -1,6 +1,6 @@
 import { FontAwesome } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,6 +20,8 @@ import {
 import { clearButton, inputField, inputWithCross } from "../../global-css";
 import { RideService } from "../../services/ride-service";
 import { olaService } from "../../services/thirdPartyApis";
+import { useSelector } from "react-redux";
+import { router } from "expo-router";
 
 const CreateRideScreen = () => {
   const [source, setSource] = useState("");
@@ -42,6 +44,8 @@ const CreateRideScreen = () => {
   const sourceDebounceRef = useRef(null);
   const destinationDebounceRef = useRef(null);
 
+  const selector = useSelector((state) => state.auth);
+
   // Handle source input change
   const handleSourceChange = (text) => {
     setSource(text);
@@ -61,7 +65,6 @@ const CreateRideScreen = () => {
     }, 300);
   };
 
-  // Handle destination input change
   const handleDestinationChange = (text) => {
     setDestination(text);
     setSelectedDestination(null);
@@ -80,41 +83,65 @@ const CreateRideScreen = () => {
     }, 300);
   };
 
+  useEffect(() => {
+    if (selectedSource && selectedDestination) {
+      fetchRoutes();
+    }
+  }, [selectedSource, selectedDestination]);
+
   const fetchRoutes = async () => {
+
     if (!selectedSource || !selectedDestination) {
       Alert.alert("Error", "Please select both source and destination");
       return;
     }
     try {
-      setLoading(true);
       const res = await olaService.getRoute(selectedSource.geometry.location, selectedDestination.geometry.location);
       setRoutes(res || []);
+      setSelectedRoute(res[0]);
+
     } catch {
       Alert.alert("Error", "Failed to fetch routes");
     } finally {
-      setLoading(false);
     }
   };
 
   const handleCreateRide = async () => {
-    if (!selectedSource || !selectedDestination || !selectedRoute) {
+
+    if (!selectedSource || !selectedDestination || !rideDate || !rideTime || !selectedRoute) {
       Alert.alert("Error", "Please fill all required fields");
       return;
     }
     try {
-      setLoading(true);
+
       const payload = {
-        source: selectedSource.description,
-        destination: selectedDestination.description,
-        date: rideDate.toISOString().split("T")[0],
-        time: rideTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        availableSlots: slots,
-        routeId: selectedRoute.id,
+        startPoint: selectedSource.description,
+        startLatitude: selectedSource.geometry.location.lat,
+        startLongitude: selectedSource.geometry.location.lng,
+
+        destinationPoint: selectedDestination.description,
+        destinationLatitude: selectedDestination.geometry.location.lat,
+        destinationLongitude: selectedDestination.geometry.location.lng,
+
+        rideDate: rideDate.toISOString().split("T")[0], // yyyy-MM-dd
+        rideTime: rideTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }), // HH:mm
+
+        availableSeats: slots || 1,
+        polyline: selectedRoute.overview_polyline,
+
+        viaPoints: [], // if applicable
       };
-      const res = await RideService.createRide(payload);
-      if (res.success) Alert.alert("Success", "Ride created successfully!");
-      else Alert.alert("Error", res.message || "Something went wrong");
-    } catch {
+
+      const { data } = await RideService.createRide(selector.userId, payload);
+
+      if (data.success) {
+        Alert.alert("Success", "Ride created successfully!");
+        router.push("/search-ride");
+      } 
+      else Alert.alert("Error", data.message || "Something went wrong");
+    } catch (error) {
+      console.log('error is ', error?.response?.data);
+
       Alert.alert("Error", "Failed to create ride");
     } finally {
       setLoading(false);
