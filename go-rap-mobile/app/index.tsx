@@ -1,6 +1,7 @@
-import RootLayout from "./_layout";
+import { Redirect } from "expo-router";
 
 
 export default function Index() {
-  return <RootLayout />;
+  return <Redirect href="./welcome" />
+
 }

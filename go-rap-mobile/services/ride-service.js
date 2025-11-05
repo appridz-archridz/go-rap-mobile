@@ -1,9 +1,8 @@
 import api from "./interceptor-service";
+import CONFIG from "../config.json";
+import { CONFIG } from '.. /config.json';
 
-// const RIDE_BASE_URL = "http://192.168.29.72:8077/gorap/rides";
-// const RIDE_BASE_URL = "http://192.168.0.12:8077/gorap/rides";
-const RIDE_BASE_URL = "http://192.168.0.14:8077:8077/gorap/rides";
-// const RIDE_BASE_URL = "https://ride-service-mo73.onrender.com/gorap/rides";
+const RIDE_BASE_URL = CONFIG.BACKEND_RENDER + '/rides'
 
 export const RideService = {
   createRide: (userId, rideDTO) => {
