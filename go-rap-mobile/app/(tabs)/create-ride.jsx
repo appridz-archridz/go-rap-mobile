@@ -18,10 +18,11 @@ import {
   View,
 } from "react-native";
 import { clearButton, inputField, inputWithCross } from "../../global-css";
-import { RideService } from "../../services/ride-service";
 import { olaService } from "../../services/thirdPartyApis";
 import { useSelector } from "react-redux";
 import { router } from "expo-router";
+import { Routes } from '@/components/RoutesModal';
+import { RideService } from './../../services/ride-service';
 
 const CreateRideScreen = () => {
   const [source, setSource] = useState("");
@@ -40,6 +41,7 @@ const CreateRideScreen = () => {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showSourceSuggestions, setShowSourceSuggestions] = useState(false);
   const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
+  const [isCreatingRide, setIsCreatingRide] = useState(false);
 
   const sourceDebounceRef = useRef(null);
   const destinationDebounceRef = useRef(null);
@@ -83,12 +85,6 @@ const CreateRideScreen = () => {
     }, 300);
   };
 
-  useEffect(() => {
-    if (selectedSource && selectedDestination) {
-      fetchRoutes();
-    }
-  }, [selectedSource, selectedDestination]);
-
   const fetchRoutes = async () => {
 
     if (!selectedSource || !selectedDestination) {
@@ -96,22 +92,25 @@ const CreateRideScreen = () => {
       return;
     }
     try {
-      const res = await olaService.getRoute(selectedSource.geometry.location, selectedDestination.geometry.location);
+      const from = selectedSource.geometry.location;
+      const to = selectedDestination.geometry.location;
+      const res = await olaService.getRoute(from, to);
+      setSelectedRoute(res[0].overview_polyline);
       setRoutes(res || []);
-      setSelectedRoute(res[0]);
-
+      Routes.show({
+        encodedRoute: res[0].overview_polyline,
+        onConfirm: (coords) => {
+          handleCreateRide();
+          console.log("User confirmed route!");
+        },
+      });
     } catch {
       Alert.alert("Error", "Failed to fetch routes");
     } finally {
     }
   };
 
-  const handleCreateRide = async () => {
-
-    if (!selectedSource || !selectedDestination || !rideDate || !rideTime || !selectedRoute) {
-      Alert.alert("Error", "Please fill all required fields");
-      return;
-    }
+  useEffect(async () => {
     try {
 
       const payload = {
@@ -127,17 +126,18 @@ const CreateRideScreen = () => {
         rideTime: rideTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }), // HH:mm
 
         availableSeats: slots || 1,
-        polyline: selectedRoute.overview_polyline,
+        polyline: selectedRoute,
 
-        viaPoints: [], // if applicable
+        // viaPoints: [], // if applicable
       };
+      console.log('payload is ', payload);
 
       const { data } = await RideService.createRide(selector.userId, payload);
 
       if (data.success) {
         Alert.alert("Success", "Ride created successfully!");
         router.push("/search-ride");
-      } 
+      }
       else Alert.alert("Error", data.message || "Something went wrong");
     } catch (error) {
       console.log('error is ', error?.response?.data);
@@ -146,6 +146,10 @@ const CreateRideScreen = () => {
     } finally {
       setLoading(false);
     }
+  }, [selectedSource, selectedDestination, rideDate, rideTime, selectedRoute, isCreatingRide]);
+
+  const handleCreateRide = async () => {
+    setIsCreatingRide(true);
   };
 
   const renderSuggestion = (item, type) => (
@@ -294,7 +298,7 @@ const CreateRideScreen = () => {
           /> */}
 
           {/* Create Ride */}
-          <TouchableOpacity style={styles.submitBtn} onPress={handleCreateRide} disabled={loading}>
+          <TouchableOpacity style={styles.submitBtn} onPress={fetchRoutes} disabled={loading}>
             {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Create Ride</Text>}
           </TouchableOpacity>
 

@@ -15,6 +15,7 @@ import { Provider } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 import { SnackbarProvider } from "../components/ui/SnackbarProvider";
 import { persistor, store } from "../redux/store";
+import { RoutesModal } from './../components/RoutesModal';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -58,18 +59,17 @@ export default function RootLayout() {
                   <Stack.Screen name="welcome" options={screenOptions("Welcome")} />
                   <Stack.Screen name="signup" options={screenOptions("Sign Up")} />
                   <Stack.Screen name="signup-2" options={screenOptions("Sign Up")} />
-                  <Stack.Screen name="create-ride" options={screenOptions("Create Ride")} />
                   <Stack.Screen name="login" options={screenOptions("Login")} />
                   <Stack.Screen name="TermsAndConditions" options={screenOptions("Terms & Conditions")} />
                   <Stack.Screen name="PrivacyPolicy" options={screenOptions("Privacy Policy")} />
                   <Stack.Screen name="forgot-password" options={screenOptions("Forgot Password")} />
-                  <Stack.Screen name="profile" options={screenOptions("Profile")} />
                   <Stack.Screen name="reset-password" options={screenOptions("Reset Password")} />
                   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                   <Stack.Screen name="my-ride" options={screenOptions("My Rides")} />
                   <Stack.Screen name="ride-details" options={{ headerShown: false }} />
                   <Stack.Screen name="ride-results" options={{ headerShown: false }} />
                 </Stack>
+                <RoutesModal />
                 {/* </ThemeProvider> */}
               </PersistGate>
             </Provider>

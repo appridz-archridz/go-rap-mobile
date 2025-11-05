@@ -1,9 +1,10 @@
 import axios from "axios";
 import CONFIG from "../config.json";
+import CONFIG from "../config.json";
 
 const OLA_BASE_URL = CONFIG.OLA_BASE_URL;
 const OLA_ROUTE_URL = CONFIG.OLA_ROUTE_URL;
-const OLA_API_KEY = "YOUR_OLA_MAPS_API_KEY";
+const OLA_API_KEY = CONFIG.OLA_MAPS_API_KEY;
 
 export const olaService = {
   // 🔍 Search autocomplete

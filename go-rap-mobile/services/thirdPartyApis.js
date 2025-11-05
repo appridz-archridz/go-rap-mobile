@@ -1,5 +1,6 @@
 import axios from "axios";
 import CONFIG from "../config.json";
+import { Polyline } from "react-native-maps";
 
 const OLA_MAPS_API_KEY = CONFIG.OLA_MAPS_API_KEY;
 const OLA_MAPS_PROJECT_ID = CONFIG.OLA_MAPS_PROJECT_ID;
@@ -12,7 +13,6 @@ export const olaService = {
     if (!query || query.length < 2) return [];
 
     try {
-
       const response = await axios.get(OLA_MAPS_AUTOCOMPLETE_BASE_URL, {
         headers: {
           Accept: "application/json",
@@ -27,20 +27,27 @@ export const olaService = {
 
       return response.data?.predictions || [];
     } catch (err) {
-      console.error("❌ Ola Maps Autocomplete error:", err?.response?.data || err.message);
+      console.error(
+        "❌ Ola Maps Autocomplete error:",
+        err?.response?.data || err.message
+      );
       return [];
     }
   },
 
   // 🗺️ Directions API — Get route between two coordinates
   getRoute: async (origin, destination) => {
-    if (!origin?.lat || !origin?.lng || !destination?.lat || !destination?.lng) {
+    if (
+      !origin?.lat ||
+      !origin?.lng ||
+      !destination?.lat ||
+      !destination?.lng
+    ) {
       console.warn("⚠️ Invalid origin or destination coordinates");
       return [];
     }
 
     try {
-
       const url = `${OLA_MAPS_DIRECTIONS_BASE_URL}?origin=${origin.lat},${origin.lng}&destination=${destination.lat},${destination.lng}&api_key=${OLA_MAPS_API_KEY}`;
 
       const response = await axios.post(
@@ -56,7 +63,10 @@ export const olaService = {
 
       return response.data?.routes || [];
     } catch (err) {
-      console.error("❌ Ola Maps Directions error:", err?.response?.data || err.message);
+      console.error(
+        "❌ Ola Maps Directions error:",
+        err?.response?.data || err.message
+      );
       return [];
     }
   },
@@ -70,7 +80,6 @@ export const locationService = {
     if (!query || query.length < 2) return [];
 
     try {
-
       const response = await axios.get(LOCATIONIQ_AUTO_COMPLETE_BASE_URL, {
         params: {
           key: LOCATIONIQ_API_KEY,
@@ -102,7 +111,10 @@ export const googlePlacesService = {
       );
       return response.data.predictions;
     } catch (err) {
-      console.error("❌ Google Places error:", err?.response?.data || err.message);
+      console.error(
+        "❌ Google Places error:",
+        err?.response?.data || err.message
+      );
       return [];
     }
   },
@@ -115,7 +127,9 @@ export const mapboxService = {
     if (!query) return [];
     try {
       const response = await axios.get(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`,
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+          query
+        )}.json`,
         {
           params: {
             access_token: MAPBOX_API_KEY,
