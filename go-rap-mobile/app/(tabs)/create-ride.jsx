@@ -1,27 +1,25 @@
+import { Routes } from '@/components/RoutesModal';
 import { FontAwesome } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  SectionList,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
+  View
 } from "react-native";
+import { useSelector } from "react-redux";
 import { clearButton, inputField, inputWithCross } from "../../global-css";
 import { olaService } from "../../services/thirdPartyApis";
-import { useSelector } from "react-redux";
-import { router } from "expo-router";
-import { Routes } from '@/components/RoutesModal';
 import { RideService } from './../../services/ride-service';
 
 const CreateRideScreen = () => {
@@ -42,6 +40,7 @@ const CreateRideScreen = () => {
   const [showSourceSuggestions, setShowSourceSuggestions] = useState(false);
   const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
   const [isCreatingRide, setIsCreatingRide] = useState(false);
+  const [path, setPath] = useState('');
 
   const sourceDebounceRef = useRef(null);
   const destinationDebounceRef = useRef(null);
@@ -95,13 +94,15 @@ const CreateRideScreen = () => {
       const from = selectedSource.geometry.location;
       const to = selectedDestination.geometry.location;
       const res = await olaService.getRoute(from, to);
-      setSelectedRoute(res[0].overview_polyline);
       setRoutes(res || []);
       Routes.show({
         encodedRoute: res[0].overview_polyline,
+        from: from,
+        to: to,
         onConfirm: (coords) => {
-          handleCreateRide();
-          console.log("User confirmed route!");
+          setPath(coords);
+          setSelectedRoute(coords);
+          Routes.hide();
         },
       });
     } catch {
@@ -110,9 +111,14 @@ const CreateRideScreen = () => {
     }
   };
 
-  useEffect(async () => {
-    try {
+  useEffect(() => {
+    if (selectedRoute) {
+      handleCreateRide();
+    }
+  }, [selectedRoute]);
 
+  const createRide = async () => {
+    try {
       const payload = {
         startPoint: selectedSource.description,
         startLatitude: selectedSource.geometry.location.lat,
@@ -128,11 +134,11 @@ const CreateRideScreen = () => {
         availableSeats: slots || 1,
         polyline: selectedRoute,
 
-        // viaPoints: [], // if applicable
       };
-      console.log('payload is ', payload);
 
       const { data } = await RideService.createRide(selector.userId, payload);
+
+      reset();
 
       if (data.success) {
         Alert.alert("Success", "Ride created successfully!");
@@ -140,13 +146,29 @@ const CreateRideScreen = () => {
       }
       else Alert.alert("Error", data.message || "Something went wrong");
     } catch (error) {
-      console.log('error is ', error?.response?.data);
-
-      Alert.alert("Error", "Failed to create ride");
+      Alert.alert("Error", "Failed to create ride",);
     } finally {
       setLoading(false);
     }
-  }, [selectedSource, selectedDestination, rideDate, rideTime, selectedRoute, isCreatingRide]);
+  };
+
+  const reset = () => {
+    setSource("");
+    setDestination("");
+    setSelectedSource(null);
+    setSelectedDestination(null);
+    setRoutes([]);
+    setSelectedRoute(null);
+    setRideDate(new Date());
+    setRideTime(new Date());
+    setSlots(1);
+  }
+
+  useEffect(() => {
+    if (selectedRoute && isCreatingRide && selectedSource && selectedDestination) {
+      createRide();
+    }
+  }, [isCreatingRide, selectedRoute]);
 
   const handleCreateRide = async () => {
     setIsCreatingRide(true);
@@ -273,29 +295,6 @@ const CreateRideScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Get Routes */}
-          {/* <TouchableOpacity style={styles.fetchBtn} onPress={fetchRoutes} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.fetchText}>Get Available Routes</Text>}
-          </TouchableOpacity> */}
-
-          {/* Route List */}
-          {/* <FlatList
-            data={routes}
-            keyExtractor={item => item.id.toString()}
-            scrollEnabled
-            nestedScrollEnabled
-            style={{ maxHeight: 250, marginTop: 10 }}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[styles.routeCard, selectedRoute?.id === item.id && styles.selectedRoute]}
-                onPress={() => setSelectedRoute(item)}
-              >
-                <Text style={styles.routeTitle}>{item.name}</Text>
-                <Text style={styles.routeInfo}>{item.distance} km • {item.duration} mins</Text>
-              </TouchableOpacity>
-            )}
-          /> */}
 
           {/* Create Ride */}
           <TouchableOpacity style={styles.submitBtn} onPress={fetchRoutes} disabled={loading}>

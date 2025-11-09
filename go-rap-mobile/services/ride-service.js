@@ -1,6 +1,5 @@
 import api from "./interceptor-service";
 import CONFIG from "../config.json";
-import { CONFIG } from '.. /config.json';
 
 const RIDE_BASE_URL = CONFIG.BACKEND_RENDER + '/rides'
 

@@ -2,7 +2,6 @@ import { FontAwesome } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import {
-  FlatList,
   Keyboard,
   ScrollView,
   StyleSheet,
@@ -10,7 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
+  View
 } from "react-native";
 import { clearButton, inputField, inputWithCross } from "../../global-css";
 import { olaService } from "../../services/thirdPartyApis";
@@ -77,6 +76,8 @@ export default function SearchRideScreen() {
       fromDescription: fromQuery,
       toDescription: toQuery,
     };
+
+    
 
   router.push({
     pathname: '/ride-results',
