@@ -1,15 +1,15 @@
-import React, { useState } from "react";
+import polyline from "@mapbox/polyline";
+import React, { useEffect, useRef, useState } from "react";
 import {
+    ActivityIndicator,
     Modal,
-    View,
+    Platform,
+    StyleSheet,
     Text,
     TouchableOpacity,
-    StyleSheet,
-    ActivityIndicator,
-    Platform,
+    View,
 } from "react-native";
-import MapView, { Marker, Polyline } from "react-native-maps";
-import polyline from "@mapbox/polyline";
+import MapView, { Marker, Polyline as RouteLine } from "react-native-maps";
 
 let _show, _hide;
 
@@ -17,52 +17,80 @@ export const RoutesModal = () => {
     const [visible, setVisible] = useState(false);
     const [encodedRoute, setEncodedRoute] = useState(null);
     const [onConfirmCb, setOnConfirmCb] = useState(null);
+    const [from, setFrom] = useState(null);
+    const [to, setTo] = useState(null);
+    const [path, setPath] = useState("");
+    const mapRef = useRef(null);
 
-    // OPEN THE MODAL
-    _show = ({ encodedRoute, onConfirm }) => {
+    // ✅ OPEN THE MODAL
+    _show = ({ encodedRoute, from, to, onConfirm }) => {
         setEncodedRoute(encodedRoute || "");
-        setOnConfirmCb(() => onConfirm); // store callback
+        setFrom(from);
+        setTo(to);
+        setOnConfirmCb(() => onConfirm);
         setVisible(true);
     };
 
-    // CLOSE MODAL
+    // ✅ CLOSE MODAL
     _hide = () => {
         setVisible(false);
         setTimeout(() => {
             setEncodedRoute(null);
             setOnConfirmCb(null);
+            setPath("");
+            setFrom(null);
+            setTo(null);
         }, 200);
     };
 
-    // USER CLICKED CONFIRM
+    // ✅ USER CLICKED CONFIRM
     const handleConfirm = () => {
-        if (onConfirmCb) {
-            const fixed = decodeURIComponent(encodedRoute);
-            const decoded = polyline.decode(fixed);
-            const coords = decoded.map(([latitude, longitude]) => ({ latitude, longitude }));
-            onConfirmCb(coords); // return coords to caller
+        try {
+            if (!encodedRoute || !from || !to) return;
+
+            const decoded = polyline.decode(decodeURIComponent(encodedRoute)) || [];
+            decoded.unshift([from.lat, from.lng]);
+            decoded.push([to.lat, to.lng]);
+
+            const pathStr = decoded.map(([lat, lng]) => `${lat},${lng}`).join(";");
+            setPath(pathStr);
+        } catch (err) {
+            console.error("Error decoding polyline:", err);
         }
-        _hide();
     };
 
-    // Loading State
-    if (!encodedRoute && visible) {
+    // ✅ When path is ready, call parent callback
+    useEffect(() => {
+        if (path && onConfirmCb) {
+            onConfirmCb(path);
+            _hide();
+        }
+    }, [path]);
+
+    // ✅ Loading / fallback state
+    if (visible && !encodedRoute) {
         return (
             <Modal visible transparent>
                 <View style={styles.center}>
                     <ActivityIndicator size="large" />
+                    <Text style={{ marginTop: 10 }}>Loading route...</Text>
                 </View>
             </Modal>
         );
     }
 
-    // If hidden, don't render anything
+    // ✅ If hidden, don't render anything
     if (!visible) return null;
 
-    // Decode only once (safe)
-    const fixed = decodeURIComponent(encodedRoute);
-    const decoded = polyline.decode(fixed);
-    const coords = decoded.map(([latitude, longitude]) => ({ latitude, longitude }));
+    // ✅ Decode route safely
+    let coords = [];
+    try {
+        const fixed = decodeURIComponent(encodedRoute);
+        const decoded = polyline.decode(fixed);
+        coords = decoded.map(([latitude, longitude]) => ({ latitude, longitude }));
+    } catch (err) {
+        console.error("Invalid polyline:", err);
+    }
 
     return (
         <Modal
@@ -73,41 +101,47 @@ export const RoutesModal = () => {
         >
             <View style={styles.backdrop}>
                 <View style={styles.sheet}>
-
                     {/* Header */}
                     <View style={styles.header}>
                         <Text style={styles.headerTitle}>Route Preview</Text>
-                        {/* <TouchableOpacity onPress={_hide}>
-                            <Text style={styles.closeText}>Close</Text>
-                        </TouchableOpacity> */}
                     </View>
 
-                    {/* Map */}
+                    {/* Map Section */}
                     <View style={styles.mapWrap}>
                         <MapView
+                            ref={mapRef}
                             style={styles.map}
+                            onLayout={() => {
+                                if (coords.length > 1 && mapRef.current) {
+                                    mapRef.current.fitToCoordinates(coords, {
+                                        edgePadding: { top: 50, bottom: 50, left: 50, right: 50 },
+                                        animated: true,
+                                    });
+                                }
+                            }}
                             initialRegion={{
-                                latitude: coords[0].latitude,
-                                longitude: coords[0].longitude,
+                                latitude: coords[0]?.latitude || 17.385,
+                                longitude: coords[0]?.longitude || 78.4867,
                                 latitudeDelta: 0.05,
                                 longitudeDelta: 0.05,
                             }}
                         >
-                            <Marker coordinate={coords[0]} title="Start" />
-                            <Marker coordinate={coords[coords.length - 1]} title="End" />
-                            <Polyline coordinates={coords} strokeWidth={5} strokeColor="blue" />
+                            {coords.length > 0 && (
+                                <>
+                                    <Marker coordinate={coords[0]} title="Start" />
+                                    <Marker coordinate={coords[coords.length - 1]} title="End" />
+                                    <RouteLine
+                                        coordinates={coords}
+                                        strokeWidth={5}
+                                        strokeColor="blue"
+                                    />
+                                </>
+                            )}
                         </MapView>
                     </View>
 
                     {/* Buttons */}
                     <View style={styles.bottomBar}>
-                        {/* <TouchableOpacity
-                            style={[styles.button, styles.secondary]}
-                            onPress={_hide}
-                        >
-                            <Text style={styles.buttonTextSecondary}>Cancel</Text>
-                        </TouchableOpacity> */}
-
                         <TouchableOpacity
                             style={[styles.button, styles.primary]}
                             onPress={handleConfirm}
@@ -115,19 +149,19 @@ export const RoutesModal = () => {
                             <Text style={styles.buttonTextPrimary}>Confirm Route</Text>
                         </TouchableOpacity>
                     </View>
-
                 </View>
             </View>
         </Modal>
     );
 };
 
-// EXPORT SIMPLE API
+// ✅ EXPORT CONTROL API
 export const Routes = {
     show: (params) => _show?.(params),
     hide: () => _hide?.(),
 };
 
+// ✅ STYLES
 const styles = StyleSheet.create({
     backdrop: {
         flex: 1,
@@ -151,7 +185,6 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
     },
     headerTitle: { fontSize: 16, fontWeight: "700" },
-    closeText: { color: "#1f6feb", fontWeight: "600" },
 
     mapWrap: { height: 380, backgroundColor: "#f6f6f6" },
     map: { flex: 1 },
@@ -171,13 +204,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     primary: { backgroundColor: "#1f6feb" },
-    secondary: {
-        backgroundColor: "#eef3ff",
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: "#c9d7ff",
-    },
     buttonTextPrimary: { color: "#fff", fontWeight: "700" },
-    buttonTextSecondary: { color: "#1f6feb", fontWeight: "700" },
 
     center: { flex: 1, justifyContent: "center", alignItems: "center" },
 });
