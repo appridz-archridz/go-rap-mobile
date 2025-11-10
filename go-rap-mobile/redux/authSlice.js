@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createSlice } from "@reduxjs/toolkit";
+import { HelperService } from './../services/helper-service';
 
 const initialState = {
   isAuthenticated: false,
@@ -32,6 +33,7 @@ const authSlice = createSlice({
       state.email = null;
       state.phone = null;
       AsyncStorage.removeItem("token");
+      HelperService.removeToken();
       console.log('--- Message from authSlice - The login token and user details REMOVED succesfully!!!');
     },
   },

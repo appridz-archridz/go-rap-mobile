@@ -1,6 +1,6 @@
 import { FontAwesome } from "@expo/vector-icons";
 import * as Device from "expo-device";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Image,
@@ -16,7 +16,7 @@ import { useDispatch, useSelector } from "react-redux";
 import PressableButton from "../components/PressableButton";
 import { AuthService } from "../components/services/authService";
 import { inputField } from "../global-css";
-import { login } from "../redux/authSlice";
+import { login, logout } from "../redux/authSlice";
 import { useSnackbar } from './../components/ui/SnackbarProvider';
 
 const eyeOpen = require("../assets/images/eye-open.png");
@@ -31,9 +31,17 @@ const Login = () => {
   const { isAuthenticated, email } = useSelector((state) => state.auth);
   const [IsSnackbarVisible, setIsSnackbarVisible] = useState(false);
   const Snackbar = useSnackbar();
+  const params = useLocalSearchParams();
 
   useEffect(() => {
-    if (isAuthenticated) {
+    console.log('msg is : , params', params?.logout);
+    if (params?.logout) {
+      dispatch(logout());
+    }
+    
+    if (isAuthenticated && !params?.logout) {
+      console.log('msg from login isaurthentictes', isAuthenticated);
+      
       router.replace("/search-ride");
     }
   }, [isAuthenticated])
