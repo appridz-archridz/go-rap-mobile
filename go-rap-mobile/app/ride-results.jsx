@@ -40,7 +40,8 @@ export default function RideResultsScreen() {
   }, []);
 
   const fetchRidesAndRoutes = async () => {
-    setLoading(true);
+    console.log('Begin ride-results.jsx -> fetchRidesAndRoutes()');
+    
     try {
       const currentDate = new Date().toISOString().split("T")[0];
       const searchDTO = {
@@ -50,9 +51,10 @@ export default function RideResultsScreen() {
         destinationLongitude: parseFloat(params.destinationLongitude),
         localDate: currentDate,
       };
-
+      
       const ridesData = await getRides(searchDTO);
-      setRides(ridesData.data.data);
+      
+      setRides(ridesData?.data?.data);
 
       const origin = {
         lat: parseFloat(params.sourceLatitude),
@@ -65,9 +67,8 @@ export default function RideResultsScreen() {
       const routesData = await olaService.getRoute(origin, destination);
       setRoutes(routesData);
     } catch (error) {
-      Alert.alert("Error", "Failed to fetch rides or route data");
+      Alert.alert("Error", "Failed to fetch rides in ride-results");
     } finally {
-      setLoading(false);
     }
   };
 
