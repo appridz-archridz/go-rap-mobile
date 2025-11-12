@@ -8,7 +8,7 @@ import { useFonts } from "expo-font";
 import { router, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 // import { NativeBaseProvider } from 'native-base';
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Provider as PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Provider } from "react-redux";
@@ -66,8 +66,27 @@ export default function RootLayout() {
                   <Stack.Screen name="reset-password" options={screenOptions("Reset Password")} />
                   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                   <Stack.Screen name="my-ride" options={screenOptions("My Rides")} />
-                  <Stack.Screen name="ride-details" options={{ headerShown: false }} />
-                  <Stack.Screen name="ride-results" options={{ headerShown: false }} />
+                  <Stack.Screen name="ride-details" options={{ headerShown: true, headerTitle: "Ride Details", headerTitleStyle: {
+                        fontSize: 18,
+                        fontWeight: "700",
+                        color: "#003366",
+                      },
+                    }} />
+                  <Stack.Screen
+                    name="ride-results"
+                    options={{
+                      headerShown: true,
+                      headerTitle: "Available Rides",
+                      headerStyle: {
+                        backgroundColor: "#fff",
+                      },
+                      headerTitleStyle: {
+                        fontSize: 18,
+                        fontWeight: "700",
+                        color: "#003366",
+                      },
+                    }}
+                  />
                 </Stack>
                 <RoutesModal />
                 {/* </ThemeProvider> */}
@@ -79,3 +98,33 @@ export default function RootLayout() {
     </PaperProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    paddingTop: 50,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 12,
+  },
+  headerContent: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#003366",
+  },
+})
