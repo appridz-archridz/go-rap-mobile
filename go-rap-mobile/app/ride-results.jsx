@@ -19,7 +19,7 @@ export default function RideResultsScreen() {
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(false);
   const [routes, setRoutes] = useState([]);
-    const slideAnim = useRef(new Animated.Value(1000)).current;
+  const slideAnim = useRef(new Animated.Value(1000)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export default function RideResultsScreen() {
 
   const fetchRidesAndRoutes = async () => {
     console.log('Begin ride-results.jsx -> fetchRidesAndRoutes()');
-    
+
     try {
       const currentDate = new Date().toISOString().split("T")[0];
       const searchDTO = {
@@ -51,9 +51,9 @@ export default function RideResultsScreen() {
         destinationLongitude: parseFloat(params.destinationLongitude),
         localDate: currentDate,
       };
-      
+
       const ridesData = await getRides(searchDTO);
-      
+
       setRides(ridesData?.data?.data);
 
       const origin = {
@@ -128,21 +128,13 @@ export default function RideResultsScreen() {
         <View style={styles.rideHeader}>
           <FontAwesome name="car" size={20} color="#0051a8" />
           <Text style={styles.rideTitle}>
-            {item.startPoint} → {item.endPoint}
+            {item?.startPoint?.split(",")[0]} → {item?.destinationPoint?.split(",")[0]}
           </Text>
         </View>
         <View style={styles.rideDetails}>
-          {/* <View style={styles.detailRow}>
-            <FontAwesome name="user" size={14} color="#555" />
-            <Text style={styles.rideSubtitle}>{item.driverName}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <FontAwesome name="car" size={14} color="#555" />
-            <Text style={styles.rideSubtitle}>{item.vehicleName}</Text>
-          </View> */}
           <View style={styles.detailRow}>
             <FontAwesome name="users" size={14} color="#555" />
-            <Text style={styles.rideSubtitle}>{item.availableSeats==1?`${item.availableSeats} seat available` :`${item.availableSeats} seats available`}</Text>
+            <Text style={styles.rideSubtitle}>{item.availableSeats == 1 ? `${item.availableSeats} seat available` : `${item.availableSeats} seats available`}</Text>
           </View>
           <View style={styles.detailRow}>
             <FontAwesome name="calendar" size={14} color="#555" />
@@ -197,17 +189,17 @@ export default function RideResultsScreen() {
       ]}
     >
       {/* Header */}
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <FontAwesome name="arrow-left" size={20} color="#003366" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Available Rides</Text>
           <Text style={styles.headerSubtitle}>
-            {params.fromDescription} → {params.toDescription}
+            {params.fromDescription.split(",")[0]} → {params.toDescription.split(",")[0]}
           </Text>
         </View>
-      </View>
+      </View> */}
 
       {/* Rides Section */}
       {loading ? (
@@ -253,33 +245,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8fafc",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    paddingTop: 50,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  backButton: {
-    padding: 8,
-    marginRight: 12,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#003366",
-  },
+  // header: {
+  //   flexDirection: "row",
+  //   alignItems: "center",
+  //   paddingHorizontal: 18,
+  //   paddingVertical: 16,
+  //   paddingTop: 50,
+  //   backgroundColor: "#fff",
+  //   borderBottomWidth: 1,
+  //   borderBottomColor: "#e0e0e0",
+  //   shadowColor: "#000",
+  //   shadowOpacity: 0.05,
+  //   shadowOffset: { width: 0, height: 2 },
+  //   shadowRadius: 4,
+  //   elevation: 2,
+  // },
+  // backButton: {
+  //   padding: 8,
+  //   marginRight: 12,
+  // },
+  // headerContent: {
+  //   flex: 1,
+  // },
+  // headerTitle: {
+  //   fontSize: 18,
+  //   fontWeight: "700",
+  //   color: "#003366",
+  // },
   headerSubtitle: {
     fontSize: 12,
     color: "#666",
