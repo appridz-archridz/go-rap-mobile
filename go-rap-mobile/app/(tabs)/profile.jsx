@@ -2,7 +2,7 @@ import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Camera, CameraView } from "expo-camera";
 import { router } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -20,7 +20,7 @@ import { AuthService } from "../../components/services/authService";
 import { uploadMedia } from "../../components/services/cloudinary";
 import { useSnackbar } from "../../components/ui/SnackbarProvider";
 import { inputField } from "../../global-css";
-import { logout } from "../../redux/authSlice";
+import { logout, update } from "../../redux/authSlice";
 import { HelperService } from "../../services/helper-service";
 
 export default function ProfileScreen() {
@@ -33,7 +33,6 @@ export default function ProfileScreen() {
     rating: 4.8,
   });
   const [cameraFacing, setCameraFacing] = useState("front");
-  const [isImageVerified, setIsImageVerified] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
   const [isEditable, setIsEditable] = useState(false);
@@ -57,6 +56,10 @@ export default function ProfileScreen() {
     router.replace("/login");
   };
 
+  useEffect(() => {
+    setUser({ ...selector, name: selector.userName });
+  }, []);
+
   const updateProfile = async () => {
     try {
       const payload = {
@@ -67,9 +70,20 @@ export default function ProfileScreen() {
         ...(capturedImage && { profilePic: capturedImage }),
       };
       await AuthService.updateProfile(payload);
+
+      const updateProfileDetails = {
+        userName: payload.userName || selector.userName,
+        email: payload.email || selector.email,
+        phone: payload.phoneNumber || selector.phone,
+        profilePic: capturedImage || selector.profilePic,
+      };
+
+      dispatch(update(updateProfileDetails));
+      setUser({ ...payload, phone: payload.phoneNumber, name: payload.userName });
       setIsEditable(false);
       snackbar.show("success", "Profile updated!");
-    } catch {
+    } catch (error) {
+      console.log('erro while updating user details: ', error);
       snackbar.show("error", "Error while updating profile");
     }
   };
@@ -98,9 +112,8 @@ export default function ProfileScreen() {
 
       const response = await uploadMedia(file.uri, file.type);
 
-      if (response?.url) {
+      if (response?.secure_url) {
         setCapturedImage(response.url);
-        setIsImageVerified(true);
       } else {
         Alert.alert("Image upload failed", "Please try again.");
       }
@@ -130,6 +143,7 @@ export default function ProfileScreen() {
             <Image
               source={{
                 uri:
+                  selector.profilePic ||
                   capturedImage ||
                   "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80",
               }}
@@ -162,19 +176,25 @@ export default function ProfileScreen() {
             </>
           )}
 
-          <TouchableOpacity
-            style={styles.editProfileButton}
-            onPress={isEditable ? updateProfile : handleEditProfile}
-          >
-            <Ionicons
-              name={isEditable ? "save-outline" : "create-outline"}
-              size={20}
-              color="#007AFF"
-            />
-            <Text style={styles.editProfileText}>
-              {isEditable ? "Save Changes" : "Edit Profile"}
-            </Text>
-          </TouchableOpacity>
+          <View style={{ flex: 1, flexDirection: "row", justifyContent: "space-between", alignContent: "center", alignItems: "center", gap: 10 }}>
+
+            {isEditable &&
+              <TouchableOpacity style={styles.editProfileButton} onPress={() => setIsEditable(false)}>
+                <Text style={styles.editProfileText}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+            }
+
+            <TouchableOpacity
+              style={styles.editProfileButton}
+              onPress={isEditable ? updateProfile : handleEditProfile}
+            >
+              <Text style={styles.editProfileText}>
+                {isEditable ? "Update" : "Edit Profile"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Stats */}
