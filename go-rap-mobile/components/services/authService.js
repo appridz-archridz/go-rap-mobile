@@ -1,5 +1,5 @@
-import api from "../../services/interceptor-service";
 import CONFIG from "../../config.json";
+import api from "../../services/interceptor-service";
 
 const AUTH_BASE_URL = CONFIG.BACKEND_RENDER + '/api/auth';
 

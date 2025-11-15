@@ -16,7 +16,7 @@ import { useDispatch, useSelector } from "react-redux";
 import PressableButton from "../components/PressableButton";
 import { AuthService } from "../components/services/authService";
 import { inputField } from "../global-css";
-import { login, logout } from "../redux/authSlice";
+import { login } from "../redux/authSlice";
 import { useSnackbar } from './../components/ui/SnackbarProvider';
 
 const eyeOpen = require("../assets/images/eye-open.png");
@@ -34,13 +34,11 @@ const Login = () => {
   const params = useLocalSearchParams();
 
   useEffect(() => {
-    console.log('msg is : , params', params?.logout);
-    if (params?.logout) {
+    if (params?.logout) {      
       dispatch(logout());
     }
     
     if (isAuthenticated && !params?.logout) {
-      console.log('msg from login isaurthentictes', isAuthenticated);
       
       router.replace("/search-ride");
     }
@@ -113,6 +111,7 @@ const Login = () => {
           email: data.data.email,
           phone: data.data.phoneNumber,
           deviceName: getDeviceInfo().modelName,
+          profilePic: data.data.profilePic
         }
         dispatch(login(stateData));
         setIsSnackbarVisible(true);
