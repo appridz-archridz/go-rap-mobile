@@ -1,4 +1,3 @@
-import { FontAwesome } from "@expo/vector-icons";
 import * as Device from "expo-device";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -152,17 +151,15 @@ const Login = () => {
           contentContainerStyle={styles.contentContainer}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Logo */}
-          <View style={styles.logoContainer}>
-            {/* <Image source={locationIcon} style={styles.logo} resizeMode="contain" /> */}
-            <FontAwesome name='motorcycle' size={100} color="#007AFF" />
-            <Text style={styles.appName}>Go-Rap</Text>
-          </View>
 
           {/* Form */}
           <View style={styles.formContainer}>
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Sign in to continue</Text>
+
+            <View style={styles.logoContainer}>
+              <Image source={require('../assets/images/gorap-location-animation.gif')} resizeMode="contain" />
+            </View>
 
             {/* Email Input */}
             <View style={styles.inputWrapper}>

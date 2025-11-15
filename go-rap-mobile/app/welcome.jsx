@@ -42,7 +42,7 @@ const Welcome = () => {
         <SafeAreaView style={styles.container}>
             {/* <View></View> */}
             <View style={styles.content}>
-                <Image style={{ width: 120, height: 120 }} source={require('../assets/images/dummy-img.png')} />
+                <Image style={{ width: 220, height: 120 }} source={require('../assets/images/gorap-logo-bg-white.png')} />
                 <Text style={styles.heading}>
                     <Text>Your Journey, Our Wheels.</Text>
                 </Text>
@@ -65,6 +65,7 @@ const styles = StyleSheet.create({
         alignItems: 'stretch',
         paddingHorizontal: 20,
         paddingBottom: 50,
+        backgroundColor: '#fff',
     },
     content: {
         flex: 1,
@@ -73,7 +74,7 @@ const styles = StyleSheet.create({
     },
     heading: {
         fontSize: 36,
-        color: '#242524FF',
+        color: '#0c2e0cff',
         textAlign: 'center',
         lineHeight: 45,
         fontFamily: 'work-sans-bold',
