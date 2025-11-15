@@ -1,4 +1,3 @@
-import { FontAwesome } from "@expo/vector-icons";
 import * as Device from "expo-device";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import PressableButton from "../components/PressableButton";
@@ -34,12 +34,12 @@ const Login = () => {
   const params = useLocalSearchParams();
 
   useEffect(() => {
-    if (params?.logout) {      
+    if (params?.logout) {
       dispatch(logout());
     }
-    
+
     if (isAuthenticated && !params?.logout) {
-      
+
       router.replace("/search-ride");
     }
   }, [isAuthenticated])
@@ -142,122 +142,120 @@ const Login = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={90}
-      > */}
-      <ScrollView
-        contentContainerStyle={styles.contentContainer}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAwareScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        enableOnAndroid={true}
+        extraScrollHeight={50}
       >
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          {/* <Image source={locationIcon} style={styles.logo} resizeMode="contain" /> */}
-          <FontAwesome name='motorcycle' size={100} color="#007AFF" />
-          <Text style={styles.appName}>Go-Rap</Text>
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
+        >
 
-        {/* Form */}
-        <View style={styles.formContainer}>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
+          {/* Form */}
+          <View style={styles.formContainer}>
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.subtitle}>Sign in to continue</Text>
 
-          {/* Email Input */}
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={inputField}
-              placeholder="Email address"
-              placeholderTextColor="#999"
-              value={form.email}
-              onChangeText={(text) => {
-                setForm({ ...form, email: text });
-                validateField("email", text);
-              }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
-          </View>
+            <View style={styles.logoContainer}>
+              <Image source={require('../assets/images/gorap-location-animation.gif')} resizeMode="contain" />
+            </View>
 
-          {/* Password Input */}
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={{ ...inputField, paddingRight: 44 }}
-              placeholder="Password"
-              placeholderTextColor="#999"
-              value={form.password}
-              onChangeText={(text) => {
-                setForm({ ...form, password: text });
-                validateField("password", text);
-              }}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-            />
-
-            <TouchableOpacity
-              style={styles.eyeButton}
-              onPress={() => setShowPassword(!showPassword)}
-            >
-              <Image
-                style={styles.eyeIcon}
-                source={showPassword ? eyeClosed : eyeOpen}
+            {/* Email Input */}
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={inputField}
+                placeholder="Email address"
+                placeholderTextColor="#999"
+                value={form.email}
+                onChangeText={(text) => {
+                  setForm({ ...form, email: text });
+                  validateField("email", text);
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
               />
+              {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+            </View>
+
+            {/* Password Input */}
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={{ ...inputField, paddingRight: 44 }}
+                placeholder="Password"
+                placeholderTextColor="#999"
+                value={form.password}
+                onChangeText={(text) => {
+                  setForm({ ...form, password: text });
+                  validateField("password", text);
+                }}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Image
+                  style={styles.eyeIcon}
+                  source={showPassword ? eyeClosed : eyeOpen}
+                />
+              </TouchableOpacity>
+
+            </View>
+
+            <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
+              {/* reset password */}
+              <TouchableOpacity
+                style={styles.forgotPasswordButton}
+                onPress={() => {
+                  router.push("/forgot-password");
+                }}
+              >
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
+
+              {/* Forgot Password */}
+              <TouchableOpacity
+                style={styles.forgotPasswordButton}
+                onPress={() => {
+                  router.push("/reset-password");
+                }}
+              >
+                <Text style={styles.forgotPasswordText}>Reset Password?</Text>
+              </TouchableOpacity>
+            </View>
+
+
+            {/* Login Button */}
+            <PressableButton disabled={!form.email || !form.password} onPress={handleLogin} text="Log in" />
+
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.divider} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.divider} />
+            </View>
+
+            {/* Google Login */}
+            <TouchableOpacity style={styles.socialButton}>
+              <Image style={styles.socialIcon} source={googleIcon} />
+              <Text style={styles.socialButtonText}>Continue with Google</Text>
             </TouchableOpacity>
 
+            {/* Sign Up */}
+            <View style={styles.signupContainer}>
+              <Text style={styles.signupText}>Don’t have an account? </Text>
+              <TouchableOpacity onPress={handleSignUp}>
+                <Text style={styles.signupLink}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <View style={{display: 'flex', flexDirection: 'row', justifyContent: 'space-between'}}>
-            {/* reset password */}
-            <TouchableOpacity
-              style={styles.forgotPasswordButton}
-              onPress={() => {
-                router.push("/forgot-password");
-              }}
-            >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
-
-            {/* Forgot Password */}
-            <TouchableOpacity
-              style={styles.forgotPasswordButton}
-              onPress={() => {
-                router.push("/reset-password");
-              }}
-            >
-              <Text style={styles.forgotPasswordText}>Reset Password?</Text>
-            </TouchableOpacity>
-          </View>
-
-
-          {/* Login Button */}
-          <PressableButton disabled={!form.email || !form.password} onPress={handleLogin} text="Log in" />
-
-          {/* Divider */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.divider} />
-          </View>
-
-          {/* Google Login */}
-          <TouchableOpacity style={styles.socialButton}>
-            <Image style={styles.socialIcon} source={googleIcon} />
-            <Text style={styles.socialButtonText}>Continue with Google</Text>
-          </TouchableOpacity>
-
-          {/* Sign Up */}
-          <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>Don’t have an account? </Text>
-            <TouchableOpacity onPress={handleSignUp}>
-              <Text style={styles.signupLink}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Snackbar */}
-        {/* <View>
+          {/* Snackbar */}
+          {/* <View>
           <Snackbar
             visible={IsSnackbarVisible}
             onDismiss={() => setIsSnackbarVisible(false)}
@@ -270,8 +268,8 @@ const Login = () => {
             </View>
           </Snackbar>
         </View> */}
-      </ScrollView>
-      {/* </KeyboardAvoidingView> */}
+        </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView >
   );
 };

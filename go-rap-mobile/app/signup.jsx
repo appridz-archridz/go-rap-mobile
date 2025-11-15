@@ -9,6 +9,7 @@ import {
   TextInput,
   View
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useSelector } from "react-redux";
 import PressableButton from "../components/PressableButton";
 import { inputField } from "../global-css";
@@ -99,11 +100,11 @@ const SignUp = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={90}
-      > */}
+      <KeyboardAwareScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        enableOnAndroid={true}
+        extraScrollHeight={50}
+      >
         <ScrollView>
           {/* Top Section */}
           <View style={styles.topContent}>
@@ -181,7 +182,7 @@ const SignUp = () => {
             />
           </View>
         </ScrollView>
-      {/* </KeyboardAvoidingView> */}
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };
