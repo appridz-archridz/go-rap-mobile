@@ -17,9 +17,9 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { olaService } from "../services/thirdPartyApis";
 import { requestRideService } from "../services/request-ride-service";
 import { useSelector } from "react-redux";
+import { router, useLocalSearchParams } from "expo-router";
 
 const RequestRideForm = ({ navigation }) => {
-  // Assuming navigation for back button or success navigation
   const [source, setSource] = useState("");
   const [destination, setDestination] = useState("");
   const [selectedSource, setSelectedSource] = useState(null);
@@ -47,13 +47,15 @@ const RequestRideForm = ({ navigation }) => {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
-  const [modalType, setModalType] = useState("success"); // success or error
+  const [modalType, setModalType] = useState("success");
 
   const [routes, setRoutes] = useState(null);
   const [selectedRoute, setSelectedRoute] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const sourceDebounceRef = useRef(null);
   const destinationDebounceRef = useRef(null);
+  const { id } = useLocalSearchParams();
 
   useEffect(() => {
     return () => {
@@ -62,6 +64,45 @@ const RequestRideForm = ({ navigation }) => {
         clearTimeout(destinationDebounceRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchRideDetails = async () => {
+      try {
+        setIsEditMode(true);
+        const ride = await requestRideService.getRideById(id);
+
+        setSource(ride.startLocation);
+        setDestination(ride.endLocation);
+        setSelectedSource({
+          description: ride.startLocation,
+          geometry: {
+            location: { lat: ride.startLatitude, lng: ride.startLongitude },
+          },
+        });
+        setSelectedDestination({
+          description: ride.endLocation,
+          geometry: {
+            location: { lat: ride.endLatitude, lng: ride.endLongitude },
+          },
+        });
+
+        setRideDate(new Date(ride.rideDate));
+        setRideTime(new Date(`${ride.rideDate}T${ride.rideTime}`));
+
+        setPassengers(ride.numberOfPassengers);
+        setFare(ride.offeredPrice.toString());
+        setNotes(ride.notes || "");
+
+        setSelectedRoute(ride.polyline || null);
+      } catch (error){
+        showModal("Failed to load ride details", "error");
+      }
+    };
+
+    fetchRideDetails();
+  }, [id]);
 
   const showModal = (message, type = "success") => {
     setModalMessage(message);
@@ -182,23 +223,18 @@ const RequestRideForm = ({ navigation }) => {
       const to = selectedDestination.geometry.location;
       const res = await olaService.getRoute(from, to);
 
-      console.log("Full route response:", JSON.stringify(res, null, 2));
-      console.log("First route legs:", res[0]?.legs);
-
       if (!res || res.length === 0) {
         throw new Error("No routes found");
       }
 
       setRoutes(res);
 
-      // Fix: Use overview_polyline instead of polyline
       if (res[0]?.overview_polyline) {
         setSelectedRoute(res[0].overview_polyline);
       }
 
       return res;
     } catch (error) {
-      console.error("Route fetch error:", error);
       Alert.alert("Error", "Failed to fetch routes");
       throw error;
     }
@@ -210,23 +246,32 @@ const RequestRideForm = ({ navigation }) => {
       return;
     }
 
+    if (!selectedSource || !selectedDestination) {
+      showModal("Please select source and destination from suggestions", "error");
+      return;
+    }
+
     if (!validateDateTime()) {
       return;
     }
 
     try {
-      // Fetch routes if not already fetched
-      const fetchedRoutes = await fetchRoutes();
-
-      if (!fetchedRoutes || !fetchedRoutes[0]) {
-        showModal("Unable to fetch route information", "error");
-        return;
+      let fetchedRoutes = routes;
+      
+      if (!isEditMode || !selectedRoute) {
+        fetchedRoutes = await fetchRoutes();
       }
 
-      // Extract distance and duration from legs
-      const firstLeg = fetchedRoutes[0].legs?.[0];
+      if (!fetchedRoutes || !fetchedRoutes[0]) {
+        if (isEditMode && selectedRoute) {
+        } else {
+          showModal("Unable to fetch route information", "error");
+          return;
+        }
+      }
 
-      // Distance is in meters, convert to km
+      const firstLeg = fetchedRoutes?.[0]?.legs?.[0];
+
       const distanceKm = firstLeg?.distance
         ? (firstLeg.distance / 1000).toFixed(2)
         : null;
@@ -255,37 +300,54 @@ const RequestRideForm = ({ navigation }) => {
         polyline: selectedRoute,
 
         distanceKm: distanceKm ? parseFloat(distanceKm) : null,
-        duration: durationMinutes, // Duration in minutes
+        duration: durationMinutes,
       };
 
-      console.log("Ride Request Payload:", payload);
+      if (notes) {
+        payload.notes = notes;
+      }
 
-      const response = await requestRideService.saveRequestRide(
-        selector.userId,
-        payload
-      );
 
-      console.log("Ride Request Response:", response);
+      let response;
+      if (isEditMode && id) {
+        response = await requestRideService.updateRide(id, payload);
+        showModal("Ride request updated successfully!", "success");
+        router.push("/my-requested-ride");
+      } else {
+        response = await requestRideService.saveRequestRide(
+          selector.userId,
+          payload
+        );
+        showModal("Ride request submitted successfully!", "success");
+        router.push("/my-requested-ride");
+      }
 
-      showModal("Ride request submitted successfully!", "success");
+      if (!isEditMode) {
+        setSource("");
+        setDestination("");
+        setSelectedSource(null);
+        setSelectedDestination(null);
+        setRideDate(new Date());
+        setRideTime(new Date());
+        setPassengers(1);
+        setFare("");
+        setNotes("");
+        setRoutes(null);
+        setSelectedRoute(null);
+      }
 
-      // Reset form
-      setSource("");
-      setDestination("");
-      setSelectedSource(null);
-      setSelectedDestination(null);
-      setRideDate(new Date());
-      setRideTime(new Date());
-      setPassengers(1);
-      setFare("");
-      setNotes("");
-      setRoutes(null);
-      setSelectedRoute(null);
+      setTimeout(() => {
+        if (navigation) {
+          navigation.goBack();
+        }
+      }, 2000);
     } catch (error) {
       console.error("Submit error:", error);
       console.error("Error details:", error.message);
       showModal(
-        `Failed to submit request: ${error.message || "Please try again"}`,
+        `Failed to ${isEditMode ? "update" : "submit"} request: ${
+          error.message || "Please try again"
+        }`,
         "error"
       );
     }
@@ -300,12 +362,13 @@ const RequestRideForm = ({ navigation }) => {
       accessibilityLabel={`Select ${
         item.description || item.structured_formatting?.main_text || item
       }`}
+      activeOpacity={0.7}
     >
-      <Text style={styles.suggestionMain}>
+      <Text style={styles.suggestionMain} numberOfLines={2} ellipsizeMode="tail">
         {item.description || item.structured_formatting?.main_text || item}
       </Text>
       {item.structured_formatting?.secondary_text && (
-        <Text style={styles.suggestionSecondary}>
+        <Text style={styles.suggestionSecondary} numberOfLines={1} ellipsizeMode="tail">
           {item.structured_formatting.secondary_text}
         </Text>
       )}
@@ -314,20 +377,17 @@ const RequestRideForm = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <FontAwesome name="arrow-left" size={24} color="#1a1a1a" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Request a Ride</Text>
-      </View> */}
-
       <ScrollView
         style={styles.requestFormContainer}
         contentContainerStyle={styles.requestFormContent}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled={true}
       >
-        <Text style={styles.formTitle}>Request a Ride</Text>
+        <Text style={styles.formTitle}>
+          {isEditMode ? "Edit Ride Request" : "Request a Ride"}
+        </Text>
 
-        <View style={styles.formGroup}>
+        <View style={[styles.formGroup, showSourceSuggestions && styles.formGroupExpanded]}>
           <Text style={styles.label}>Source *</Text>
           <View style={styles.inputWithCross}>
             <TextInput
@@ -338,7 +398,7 @@ const RequestRideForm = ({ navigation }) => {
               onChangeText={handleSourceChange}
               accessibilityLabel="Enter source location"
             />
-            {source.length > 0 && (
+            {source?.length > 0 && (
               <TouchableOpacity
                 onPress={() => {
                   setSource("");
@@ -366,18 +426,23 @@ const RequestRideForm = ({ navigation }) => {
             </Text>
           )}
 
-          {showSourceSuggestions && sourceSuggestions.length > 0 && (
-            <View style={styles.dropdown}>
+          {showSourceSuggestions && sourceSuggestions?.length > 0 && (
+            <ScrollView
+              style={styles.dropdown}
+              nestedScrollEnabled={true}
+              keyboardShouldPersistTaps="always"
+              showsVerticalScrollIndicator={true}
+            >
               {sourceSuggestions.map((item, i) => (
                 <View key={item.place_id || i}>
                   {renderSuggestion(item, "source")}
                 </View>
               ))}
-            </View>
+            </ScrollView>
           )}
         </View>
 
-        <View style={styles.formGroup}>
+        <View style={[styles.formGroup, showDestSuggestions && styles.formGroupExpanded]}>
           <Text style={styles.label}>Destination *</Text>
           <View style={styles.inputWithCross}>
             <TextInput
@@ -388,7 +453,7 @@ const RequestRideForm = ({ navigation }) => {
               onChangeText={handleDestinationChange}
               accessibilityLabel="Enter destination location"
             />
-            {destination.length > 0 && (
+            {destination?.length > 0 && (
               <TouchableOpacity
                 onPress={() => {
                   setDestination("");
@@ -416,14 +481,19 @@ const RequestRideForm = ({ navigation }) => {
             </Text>
           )}
 
-          {showDestSuggestions && destSuggestions.length > 0 && (
-            <View style={styles.dropdown}>
+          {showDestSuggestions && destSuggestions?.length > 0 && (
+            <ScrollView
+              style={styles.dropdown}
+              nestedScrollEnabled={true}
+              keyboardShouldPersistTaps="always"
+              showsVerticalScrollIndicator={true}
+            >
               {destSuggestions.map((item, i) => (
                 <View key={item.place_id || i}>
                   {renderSuggestion(item, "destination")}
                 </View>
               ))}
-            </View>
+            </ScrollView>
           )}
         </View>
 
@@ -527,9 +597,13 @@ const RequestRideForm = ({ navigation }) => {
         <TouchableOpacity
           style={styles.submitButton}
           onPress={handleSubmitRequest}
-          accessibilityLabel="Submit ride request"
+          accessibilityLabel={
+            isEditMode ? "Update ride request" : "Submit ride request"
+          }
         >
-          <Text style={styles.submitButtonText}>Post Ride Request</Text>
+          <Text style={styles.submitButtonText}>
+            {isEditMode ? "Update Ride Request" : "Post Ride Request"}
+          </Text>
         </TouchableOpacity>
 
         {showDatePicker && (
@@ -558,7 +632,6 @@ const RequestRideForm = ({ navigation }) => {
         )}
       </ScrollView>
 
-      {/* Custom Modal for notifications */}
       <Modal
         transparent={true}
         visible={modalVisible}
@@ -589,15 +662,6 @@ const RequestRideForm = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
-  header: {
-    padding: 20,
-    paddingTop: 10,
-    backgroundColor: "#fff",
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  backButton: { marginRight: 10 },
-  headerTitle: { fontSize: 28, fontWeight: "bold", color: "#1a1a1a" },
   requestFormContainer: { flex: 1, backgroundColor: "#f8fafc" },
   requestFormContent: { padding: 20, paddingBottom: 40 },
   formTitle: {
@@ -607,7 +671,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 20,
   },
-  formGroup: { marginBottom: 20, position: "relative" },
+  formGroup: { 
+    marginBottom: 20, 
+    position: "relative",
+  },
+  formGroupExpanded: {
+    marginBottom: 220,
+  },
   label: { fontSize: 15, fontWeight: "600", color: "#333", marginBottom: 8 },
   inputWithCross: {
     flexDirection: "row",
@@ -616,7 +686,6 @@ const styles = StyleSheet.create({
     borderColor: "#ECEBF0",
     borderRadius: 10,
     backgroundColor: "#fff",
-    position: "relative",
   },
   formInput: {
     flex: 1,
@@ -625,7 +694,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#000",
   },
-  clearButton: { padding: 10, justifyContent: "center", alignItems: "center" },
+  clearButton: { 
+    padding: 10, 
+    justifyContent: "center", 
+    alignItems: "center",
+  },
   loader: { marginRight: 10 },
   errorText: {
     color: "#ef4444",
@@ -646,17 +719,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 3 },
     shadowRadius: 6,
-    elevation: 12,
-    zIndex: 9999,
-    maxHeight: 250,
+    elevation: 10,
+    zIndex: 10000,
+    maxHeight: 200,
   },
   dropdownItem: {
     padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
-  suggestionMain: { fontSize: 14, fontWeight: "600", color: "#333" },
-  suggestionSecondary: { fontSize: 12, color: "#666", marginTop: 2 },
+  suggestionMain: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+  },
+  suggestionSecondary: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 2,
+  },
   dateField: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -694,7 +775,14 @@ const styles = StyleSheet.create({
     color: "#000",
     marginHorizontal: 12,
   },
-  textArea: { height: 100, paddingTop: 12, textAlignVertical: "top" },
+  textArea: { 
+    height: 100, 
+    paddingTop: 12, 
+    textAlignVertical: "top",
+    borderWidth: 1,
+    borderColor: "#ECEBF0",
+    borderRadius: 10,
+  },
   submitButton: {
     backgroundColor: "#0051a8",
     borderRadius: 10,

@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { FontAwesome } from "@expo/vector-icons";
 import { requestRideService } from "../services/request-ride-service";
+import { router } from "expo-router";
 
 const MyRequestRides = () => {
   const selector = useSelector((state) => state.auth);
@@ -66,9 +67,8 @@ const MyRequestRides = () => {
   };
 
   const handleEdit = (rideId) => {
-    // TODO: Implement navigation to edit screen
-    console.log("Edit ride:", rideId);
-    Alert.alert("Edit Ride", `Navigate to edit screen for ride: ${rideId}`);
+   router.push(`/request-ride?id=${rideId}`);
+
   };
 
   const handleCancel = (rideId) => {
@@ -81,13 +81,13 @@ const MyRequestRides = () => {
         text: "Yes",
         onPress: async () => {
           try {
-            // TODO: Implement API call to cancel ride
-            // await requestRideService.cancelRide(rideId);
-            console.log("Cancel ride:", rideId);
+             const responnse=await requestRideService.cancelRide(rideId);
+             if(responnse.data.statusCode==="200 OK"){
             Alert.alert("Success", "Ride cancelled successfully");
+             }
+         
             handleRefresh();
           } catch (error) {
-            console.error("Error cancelling ride:", error);
             Alert.alert("Error", "Failed to cancel ride. Please try again.");
           }
         },
@@ -209,7 +209,7 @@ const MyRequestRides = () => {
                     { color: getStatusColor(item.status) },
                   ]}
                 >
-                  {item.status?.toUpperCase() || "ACTIVE"}
+                  {item.rideStatus?.toUpperCase() || "ACTIVE"}
                 </Text>
               </View>
             </View>

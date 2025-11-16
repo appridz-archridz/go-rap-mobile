@@ -27,5 +27,31 @@ export const requestRideService = {
     } catch (error) {
       throw error;
     }
-  }
+  },
+  cancelRide: async (rideId) => {
+    try {
+      const response = await api.patch(`${RIDE_BASE_URL}/cancel/${rideId}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  getRideById: async (rideId) => {
+    try {
+      const response = await api.get(`${RIDE_BASE_URL}/get/${rideId}`);
+      return response.data.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  updateRide: async (rideId, requestRideDTO) => {
+    try {
+      const response = await api.put(`${RIDE_BASE_URL}/update/${rideId}`, requestRideDTO);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 };
