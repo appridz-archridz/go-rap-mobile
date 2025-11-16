@@ -119,6 +119,13 @@ export default function ProfileScreen() {
       icon: "car-outline",
       onPress: () => router.push("/my-ride"),
     },
+    {
+      id: 2,
+      title: "My Requested Rides",
+      subtitle: "View your Requested rides",
+      icon: "car-outline",
+      onPress: () => router.push("/my-requested-ride"),
+    }
   ];
 
   return (
