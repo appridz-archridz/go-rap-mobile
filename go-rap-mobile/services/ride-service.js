@@ -1,5 +1,5 @@
-import api from "./interceptor-service";
 import CONFIG from "../config.json";
+import api from "./interceptor-service";
 
 const RIDE_BASE_URL = CONFIG.BACKEND_RENDER + '/rides'
 
@@ -17,5 +17,9 @@ export const getRides = async (searchDTO) => {
 
 export const getRideById = async (rideId) => {
  return api.get(`${RIDE_BASE_URL}/get/${rideId}`);
+};
+
+export const getRidesByUser = async (rideId) => {
+ return api.get(`${RIDE_BASE_URL}/get/by-user/${rideId}`);
 };
 
