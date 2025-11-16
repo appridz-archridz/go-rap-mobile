@@ -130,7 +130,7 @@ export default function ProfileScreen() {
       title: "My Rides",
       subtitle: "View your created and joined rides",
       icon: "car-outline",
-      onPress: () => router.push("/my-ride"),
+      onPress: () => router.push("/UserRidesScreen"),
     },
   ];
 
