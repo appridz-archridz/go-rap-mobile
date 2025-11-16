@@ -65,7 +65,8 @@ export default function RootLayout() {
                   <Stack.Screen name="forgot-password" options={screenOptions("Forgot Password")} />
                   <Stack.Screen name="reset-password" options={screenOptions("Reset Password")} />
                   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="my-ride" options={screenOptions("My Rides")} />
+                  <Stack.Screen name="UserRidesScreen" options={{ title: "My Rides" }} />
+                  <Stack.Screen name="vehicle-information" options={{ headerShown: false }}/>
                   <Stack.Screen name="ride-details" options={{ headerShown: true, headerTitle: "Ride Details", headerTitleStyle: {
                         fontSize: 18,
                         fontWeight: "700",

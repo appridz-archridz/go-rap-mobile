@@ -4,8 +4,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
   Image,
-  KeyboardAvoidingView,
-  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -14,6 +12,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import FilePicker from '../components/FilePicker';
 import PressableButton from '../components/PressableButton';
 import { signUp } from '../components/services/authService';
@@ -117,9 +116,9 @@ const SignUp2 = () => {
         profilePic: profilePic?.uri,
         deviceName: (await getDeviceInfo()).uniqueId,
       };
-      
+
       const { data } = (await signUp(payload));
-      
+
       if (data && data?.success) {
         console.log('Done with signup');
         router.push('/login');
@@ -137,10 +136,10 @@ const SignUp2 = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={90}
+      <KeyboardAwareScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        enableOnAndroid={true}
+        extraScrollHeight={50}
       >
         <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
           <View style={styles.inputFields}>
@@ -235,7 +234,7 @@ const SignUp2 = () => {
           </View>
 
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 };
