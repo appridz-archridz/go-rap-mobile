@@ -1,9 +1,12 @@
 import { FontAwesome } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useState } from 'react';
+import { useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from 'react';
 import { Alert, Image, Keyboard, KeyboardAvoidingView, Platform, TextInput as RNTextInput, ScrollView, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { useSelector } from "react-redux";
 import FilePicker from '../components/FilePicker';
 import { clearButton, inputField, inputWithCross } from "../global-css";
+import { createVehicle, getVehicleById, updateVehicle } from "../services/vehicle-service";
 
 const VehicleInfoFormScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -26,6 +29,9 @@ const VehicleInfoFormScreen = ({ navigation }) => {
   const [showInsuranceExpiryPicker, setShowInsuranceExpiryPicker] = useState(false);
   const [showPucExpiryPicker, setShowPucExpiryPicker] = useState(false);
   const [showPermitExpiryPicker, setShowPermitExpiryPicker] = useState(false);
+  const { vehicleId } = useLocalSearchParams();
+  const isEdit = !!vehicleId;
+  const userId = useSelector((state) => state.auth.userId);
 
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
@@ -41,25 +47,69 @@ const VehicleInfoFormScreen = ({ navigation }) => {
     setShowPermitExpiryPicker(false);
   };
 
-  const handleSubmit = () => {
-    // Basic validation
-    if (!formData.vehicleNumber || !formData.dlNumber || !formData.consentGiven) {
-      Alert.alert('Error', 'Please fill in all mandatory fields and give consent.');
-      return;
-    }
+  const handleSubmit = async () => {
+    try {
+      if (!formData.vehicleNumber || !formData.dlNumber || !formData.consentGiven) {
+        Alert.alert("Error", "Please fill all mandatory fields and give consent.");
+        return;
+      }
 
-    // Prepare payload with photo URI
-    const payload = {
-      ...formData,
-      vehicleFrontPhotoUrl: formData.vehicleFrontPhoto?.uri,
+      const payload = {
+        ...formData,
+        vehicleFrontPhotoUrl: formData.vehicleFrontPhoto?.uri || null,
+      };
+      console.log("userId",userId)
+      let response = isEdit
+        ? await updateVehicle(vehicleId, payload)
+        : await createVehicle(userId, payload);
+      console.log("response", typeof response.status)
+      if (response.status == 201){
+        Alert.alert("Success", isEdit ? "Vehicle updated!" : "Vehicle created!");
+        navigation.goBack();
+      } else {
+        Alert.alert("Error", response.data.message || "Something went wrong.");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Submit failed.");
+      console.log(error);
+    }
+  };
+
+  // FIX: Use useEffect with proper dependencies
+  useEffect(() => {
+    const loadVehicle = async () => {
+      try {
+        const { data } = await getVehicleById(vehicleId);
+
+        if (data.success && data.vehicle) {
+          // Don't spread formData here - just set the vehicle data directly
+          setFormData({
+            vehicleNumber: data.vehicle.vehicleNumber || '',
+            dlNumber: data.vehicle.dlNumber || '',
+            dlExpiry: data.vehicle.dlExpiry ? new Date(data.vehicle.dlExpiry) : new Date(),
+            insurancePolicyNumber: data.vehicle.insurancePolicyNumber || '',
+            insuranceExpiry: data.vehicle.insuranceExpiry ? new Date(data.vehicle.insuranceExpiry) : new Date(),
+            isCommercialInsurance: data.vehicle.isCommercialInsurance || false,
+            pucNumber: data.vehicle.pucNumber || '',
+            pucExpiry: data.vehicle.pucExpiry ? new Date(data.vehicle.pucExpiry) : new Date(),
+            permitNumber: data.vehicle.permitNumber || '',
+            permitExpiry: data.vehicle.permitExpiry ? new Date(data.vehicle.permitExpiry) : new Date(),
+            idProofNumber: data.vehicle.idProofNumber || '',
+            vehicleFrontPhoto: data.vehicle.vehicleFrontPhotoUrl
+              ? { uri: data.vehicle.vehicleFrontPhotoUrl }
+              : null,
+            consentGiven: data.vehicle.consentGiven || false,
+          });
+        }
+      } catch (error) {
+        console.log("Failed to load vehicle:", error);
+      }
     };
 
-    // Here, you would typically send the data to your backend
-    console.log('Submitting vehicle info:', payload);
-    Alert.alert('Success', 'Vehicle information submitted successfully!');
-    // Navigate back or to another screen
-    navigation.goBack();
-  };
+    if (isEdit && vehicleId) {
+      loadVehicle();
+    }
+  }, [isEdit, vehicleId]); // Add dependencies
 
   return (
     <KeyboardAvoidingView
@@ -69,7 +119,6 @@ const VehicleInfoFormScreen = ({ navigation }) => {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Text style={styles.title}>Vehicle Information</Text>
-
 
           <View style={{ marginBottom: 15 }}>
             <Text style={styles.label}>Vehicle Number *</Text>
