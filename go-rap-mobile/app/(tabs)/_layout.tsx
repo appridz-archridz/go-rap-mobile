@@ -41,6 +41,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="explore-request-ride"
+        options={{
+          title: 'Explore rides',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="globe" size={size} color={color} />
+          ),
+        }}
+      />
     </Tabs>
     
   );
