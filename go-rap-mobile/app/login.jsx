@@ -8,7 +8,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,7 +17,7 @@ import PressableButton from "../components/PressableButton";
 import { AuthService } from "../components/services/authService";
 import { inputField } from "../global-css";
 import { login } from "../redux/authSlice";
-import { useSnackbar } from './../components/ui/SnackbarProvider';
+import { useSnackbar } from "./../components/ui/SnackbarProvider";
 
 const eyeOpen = require("../assets/images/eye-open.png");
 const eyeClosed = require("../assets/images/eye-closed.png");
@@ -33,28 +33,29 @@ const Login = () => {
   const Snackbar = useSnackbar();
   const params = useLocalSearchParams();
 
-  useEffect(() => {
-    if (params?.logout) {
-      dispatch(logout());
-    }
+  // useEffect(() => {
+  //   if (params?.logout) {
+  //     dispatch(logout());
+  //   }
 
-    if (isAuthenticated && !params?.logout) {
-
-      router.replace("/search-ride");
-    }
-  }, [isAuthenticated])
+  //   if (isAuthenticated && !params?.logout) {
+  //     router.replace("/search-ride");
+  //   }
+  // }, [isAuthenticated]);
 
   const validateField = (field, value) => {
     let message = "";
 
     if (field === "email") {
       if (!value) message = "Email is required";
-      else if (!/\S+@\S+\.\S+/.test(value)) message = "Enter a valid email address";
+      else if (!/\S+@\S+\.\S+/.test(value))
+        message = "Enter a valid email address";
     }
 
     if (field === "password") {
       if (!value) message = "Password is required";
-      else if (value.length < 8) message = "Password must be at least 8 characters";
+      else if (value.length < 8)
+        message = "Password must be at least 8 characters";
     }
 
     setErrors((prev) => ({ ...prev, [field]: message }));
@@ -78,7 +79,6 @@ const Login = () => {
     return deviceInfo;
   };
 
-
   const validate = () => {
     let allValid = true;
 
@@ -101,9 +101,7 @@ const Login = () => {
     try {
       const { data } = await AuthService.login(payLoad);
       const token = data.data?.token;
-
       if (data.statusCode === "200 OK") {
-
         const stateData = {
           token: token,
           userId: data.data.id,
@@ -111,28 +109,31 @@ const Login = () => {
           email: data.data.email,
           phone: data.data.phoneNumber,
           deviceName: getDeviceInfo().modelName,
-          profilePic: data.data.profilePic
-        }
+          profilePic: data.data.profilePic,
+          refreshToken: data.data.refreshToken,
+        };
         dispatch(login(stateData));
         setIsSnackbarVisible(true);
-        Snackbar.show('success', "Log in succesfull");
-        console.log('Login successfull!!!');
-        router.push('/search-ride');
-
+        Snackbar.show("success", "Log in succesfull");
+        console.log("Login successfull!!!");
+        router.push("/search-ride");
       } else {
         console.log("Login failed:", data.message);
-        Snackbar.show('error', data.message || "Login failed. Try again.");
+        Snackbar.show("error", data.message || "Login failed. Try again.");
       }
     } catch (error) {
       if (error.response) {
         console.log("Server error:", error.response.data.message);
-        Snackbar.show('error', error.response.data.message || "Login failed. Try again.");
+        Snackbar.show(
+          "error",
+          error.response.data.message || "Login failed. Try again."
+        );
       } else if (error.request) {
         console.log("Network error: server not reachable");
-        Snackbar.show('error', "Network error: server not reachable");
+        Snackbar.show("error", "Network error: server not reachable");
       } else {
         console.log("Unexpected error:", error.message);
-        Snackbar.show('error', error.message || "Login failed. Try again.");
+        Snackbar.show("error", error.message || "Login failed. Try again.");
       }
     }
   };
@@ -151,14 +152,16 @@ const Login = () => {
           contentContainerStyle={styles.contentContainer}
           keyboardShouldPersistTaps="handled"
         >
-
           {/* Form */}
           <View style={styles.formContainer}>
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Sign in to continue</Text>
 
             <View style={styles.logoContainer}>
-              <Image source={require('../assets/images/gorap-location-animation.gif')} resizeMode="contain" />
+              <Image
+                source={require("../assets/images/gorap-location-animation.gif")}
+                resizeMode="contain"
+              />
             </View>
 
             {/* Email Input */}
@@ -176,7 +179,9 @@ const Login = () => {
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-              {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+              {errors.email ? (
+                <Text style={styles.errorText}>{errors.email}</Text>
+              ) : null}
             </View>
 
             {/* Password Input */}
@@ -203,10 +208,15 @@ const Login = () => {
                   source={showPassword ? eyeClosed : eyeOpen}
                 />
               </TouchableOpacity>
-
             </View>
 
-            <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
+            <View
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                justifyContent: "space-between",
+              }}
+            >
               {/* reset password */}
               <TouchableOpacity
                 style={styles.forgotPasswordButton}
@@ -228,9 +238,12 @@ const Login = () => {
               </TouchableOpacity>
             </View>
 
-
             {/* Login Button */}
-            <PressableButton disabled={!form.email || !form.password} onPress={handleLogin} text="Log in" />
+            <PressableButton
+              disabled={!form.email || !form.password}
+              onPress={handleLogin}
+              text="Log in"
+            />
 
             {/* Divider */}
             <View style={styles.dividerContainer}>
@@ -270,7 +283,7 @@ const Login = () => {
         </View> */}
         </ScrollView>
       </KeyboardAwareScrollView>
-    </SafeAreaView >
+    </SafeAreaView>
   );
 };
 
@@ -283,8 +296,19 @@ const styles = StyleSheet.create({
   logo: { width: 90, height: 90, marginBottom: 10, tintColor: "#0057D9" },
   appName: { fontSize: 30, fontWeight: "700", color: "#0057D9" },
   formContainer: { width: "100%" },
-  title: { fontSize: 24, fontWeight: "700", color: "#000", textAlign: "center", marginBottom: 6 },
-  subtitle: { fontSize: 15, color: "#666", textAlign: "center", marginBottom: 30 },
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#000",
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 30,
+  },
   inputWrapper: {
     marginBottom: 18,
     position: "relative", // allows absolute positioning inside
@@ -300,10 +324,15 @@ const styles = StyleSheet.create({
     height: 22,
     width: 22,
     tintColor: "#666",
-  }, bottomText: { color: "gray", fontSize: 12, marginTop: 4, marginLeft: 4 },
+  },
+  bottomText: { color: "gray", fontSize: 12, marginTop: 4, marginLeft: 4 },
   forgotPasswordButton: { alignSelf: "flex-end", marginBottom: 20 },
   forgotPasswordText: { color: "#0057D9", fontSize: 14, fontWeight: "600" },
-  dividerContainer: { flexDirection: "row", alignItems: "center", marginVertical: 16 },
+  dividerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 16,
+  },
   divider: { flex: 1, height: 1, backgroundColor: "#E0E0E0" },
   dividerText: { color: "#999", paddingHorizontal: 12, fontSize: 14 },
   socialButton: {
@@ -318,7 +347,11 @@ const styles = StyleSheet.create({
   },
   socialIcon: { width: 22, height: 22, marginRight: 10 },
   socialButtonText: { color: "#000", fontSize: 15, fontWeight: "500" },
-  signupContainer: { flexDirection: "row", justifyContent: "center", marginTop: 10 },
+  signupContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 10,
+  },
   signupText: { color: "#666", fontSize: 14 },
   signupLink: { color: "#0057D9", fontSize: 14, fontWeight: "600" },
   errorText: { color: "red", fontSize: 12, marginTop: 4, marginLeft: 4 },

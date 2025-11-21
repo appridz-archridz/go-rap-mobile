@@ -33,6 +33,10 @@ export const updatePassword = (email, password) => {
   return api.patch(`${AUTH_BASE_URL}/update-password?email=${email}&password=${password}`);
 };
 
+export const updateRefreshToken = (refreshToken) => { 
+  return api.post(`${AUTH_BASE_URL}/refresh-token`, { refreshToken: refreshToken });
+};
+
 export const AuthService = {
   login,
   signUp,

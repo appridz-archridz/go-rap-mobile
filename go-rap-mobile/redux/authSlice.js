@@ -25,9 +25,10 @@ const authSlice = createSlice({
       state.phone = action.payload.phone;
       state.profilePic = action.payload.profilePic;
       AsyncStorage.setItem("token", action.payload.token);
-      console.log(
-        "--- Message from authSlice - The login token and user details SET succesfully!!!"
-      );
+      state.refreshToken = action.payload.refreshToken;
+      HelperService.setToken(action.payload.token);
+      HelperService.setRefreshToken(action.payload.refreshToken);
+
     },
     logout: (state) => {
       state.isAuthenticated = false;
@@ -37,8 +38,10 @@ const authSlice = createSlice({
       state.email = null;
       state.phone = null;
       state.profilePic = null;
+      state.refreshToken = null;
       AsyncStorage.removeItem("token");
       HelperService.removeToken();
+      HelperService.removeRefreshToken();
       console.log(
         "--- Message from authSlice - The login token and user details REMOVED succesfully!!!"
       );
@@ -48,6 +51,15 @@ const authSlice = createSlice({
       state.email = action.payload.email;
       state.phone = action.payload.phone;
       state.profilePic = action.payload.profilePic;
+    },
+    updateToken: (state, action) => {
+      state.token = action.payload.accessToken;
+      state.refreshToken = action.payload.refreshToken;
+      
+      HelperService.setToken(action.payload.accessToken);
+      HelperService.setRefreshToken(action.payload.refreshToken);
+      console.log('updated token', state.token, state.refreshToken);
+      
     },
   },
 });
