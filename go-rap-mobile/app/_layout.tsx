@@ -16,6 +16,7 @@ import { PersistGate } from "redux-persist/integration/react";
 import { SnackbarProvider } from "../components/ui/SnackbarProvider";
 import { persistor, store } from "../redux/store";
 import { RoutesModal } from './../components/RoutesModal';
+import { LoaderProvider } from './../components/ui/Loader';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -49,51 +50,54 @@ export default function RootLayout() {
     <PaperProvider>
       <SafeAreaProvider>
         <SafeAreaView style={{ flex: 1 }} edges={["top", "right", "left"]}>
-          <SnackbarProvider>
-            <Provider store={store}>
-              <PersistGate loading={null} persistor={persistor}>
-                {/* <ThemeProvider> */}
-                <StatusBar style="dark" translucent={false} />
+          <LoaderProvider>
+            <SnackbarProvider>
+              <Provider store={store}>
+                <PersistGate loading={null} persistor={persistor}>
+                  {/* <ThemeProvider> */}
+                  <StatusBar style="dark" translucent={false} />
 
-                <Stack screenOptions={{ headerShown: true, headerTitleAlign: "center" }}>
-                  <Stack.Screen name="welcome" options={screenOptions("Welcome")} />
-                  <Stack.Screen name="signup" options={screenOptions("Sign Up")} />
-                  <Stack.Screen name="signup-2" options={screenOptions("Sign Up")} />
-                  <Stack.Screen name="login" options={screenOptions("Login")} />
-                  <Stack.Screen name="TermsAndConditions" options={screenOptions("Terms & Conditions")} />
-                  <Stack.Screen name="PrivacyPolicy" options={screenOptions("Privacy Policy")} />
-                  <Stack.Screen name="forgot-password" options={screenOptions("Forgot Password")} />
-                  <Stack.Screen name="reset-password" options={screenOptions("Reset Password")} />
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="UserRidesScreen" options={{ title: "My Rides" }} />
-                  <Stack.Screen name="vehicle-information" options={{ headerShown: false }}/>
-                  <Stack.Screen name="ride-details" options={{ headerShown: true, headerTitle: "Ride Details", headerTitleStyle: {
+                  <Stack screenOptions={{ headerShown: true, headerTitleAlign: "center" }}>
+                    <Stack.Screen name="welcome" options={screenOptions("Welcome")} />
+                    <Stack.Screen name="signup" options={screenOptions("Sign Up")} />
+                    <Stack.Screen name="signup-2" options={screenOptions("Sign Up")} />
+                    <Stack.Screen name="login" options={screenOptions("Login")} />
+                    <Stack.Screen name="TermsAndConditions" options={screenOptions("Terms & Conditions")} />
+                    <Stack.Screen name="PrivacyPolicy" options={screenOptions("Privacy Policy")} />
+                    <Stack.Screen name="forgot-password" options={screenOptions("Forgot Password")} />
+                    <Stack.Screen name="reset-password" options={screenOptions("Reset Password")} />
+                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                    <Stack.Screen name="UserRidesScreen" options={{ title: "My Rides" }} />
+                    <Stack.Screen name="vehicle-information" options={{ headerShown: false }} />
+                    <Stack.Screen name="ride-details" options={{
+                      headerShown: true, headerTitle: "Ride Details", headerTitleStyle: {
                         fontSize: 18,
                         fontWeight: "700",
                         color: "#003366",
                       },
                     }} />
-                  <Stack.Screen
-                    name="ride-results"
-                    options={{
-                      headerShown: true,
-                      headerTitle: "Available Rides",
-                      headerStyle: {
-                        backgroundColor: "#fff",
-                      },
-                      headerTitleStyle: {
-                        fontSize: 18,
-                        fontWeight: "700",
-                        color: "#003366",
-                      },
-                    }}
-                  />
-                </Stack>
-                <RoutesModal />
-                {/* </ThemeProvider> */}
-              </PersistGate>
-            </Provider>
-          </SnackbarProvider>
+                    <Stack.Screen
+                      name="ride-results"
+                      options={{
+                        headerShown: true,
+                        headerTitle: "Available Rides",
+                        headerStyle: {
+                          backgroundColor: "#fff",
+                        },
+                        headerTitleStyle: {
+                          fontSize: 18,
+                          fontWeight: "700",
+                          color: "#003366",
+                        },
+                      }}
+                    />
+                  </Stack>
+                  <RoutesModal />
+                  {/* </ThemeProvider> */}
+                </PersistGate>
+              </Provider>
+            </SnackbarProvider>
+          </LoaderProvider>
         </SafeAreaView>
       </SafeAreaProvider>
     </PaperProvider>
