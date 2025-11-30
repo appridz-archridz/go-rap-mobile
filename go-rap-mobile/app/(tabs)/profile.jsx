@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 50,
   },
-  snackbar: {
+  snackbar: { 
     backgroundColor: "#007AFF",
   },
 });
