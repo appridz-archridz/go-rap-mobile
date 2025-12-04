@@ -3,6 +3,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { router } from "expo-router";
 import { HelperService } from "./helper-service";
+import { updateToken } from "../redux/authSlice";
+import { updateRefreshToken } from "../components/services/authService";
 
 const api = axios.create();
 
@@ -23,13 +25,20 @@ api.interceptors.response.use(
     return response;
   },
   async (error) => {
+    console.log("error",error)
     if (error.response?.status === 401) {
-      router.replace({
-        pathname: "/login",
-        params: {
-          logout: true,
-        },
-      });
+      if (HelperService.getRefreshToken()) {
+        const response = await updateRefreshToken(HelperService.getRefreshToken());
+
+        const { accessToken, refreshToken } = response.data.data;
+        HelperService.setToken(accessToken);
+        updateToken(accessToken, refreshToken);
+   
+      } else {
+        router.replace("/login");
+      }
+    } else {
+      console.log("Error", error);
     }
     return Promise.reject(error);
   }
