@@ -12,12 +12,13 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { Snackbar, TextInput } from "react-native-paper";
 import { useDispatch, useSelector } from "react-redux";
 import { AuthService } from "../../components/services/authService";
 import { uploadMedia } from "../../components/services/cloudinary";
+import { useLoader } from "../../components/ui/Loader";
 import { useSnackbar } from "../../components/ui/SnackbarProvider";
 import { inputField } from "../../global-css";
 import { logout, update } from "../../redux/authSlice";
@@ -34,17 +35,19 @@ export default function ProfileScreen() {
   });
   const [cameraFacing, setCameraFacing] = useState("front");
   const [showCamera, setShowCamera] = useState(false);
+  const [previewUri, setPreviewUri] = useState(null);
+  const [localPreviewUri, setLocalPreviewUri] = useState(null);
   const [capturedImage, setCapturedImage] = useState(null);
   const [isEditable, setIsEditable] = useState(false);
   const [isSnackbarVisible, setIsSnackbarVisible] = useState(false);
 
+  const { showLoader, hideLoader } = useLoader();
   const dispatch = useDispatch();
   const snackbar = useSnackbar();
   const selector = useSelector((state) => state.auth);
   const cameraRef = useRef(null);
 
   const handleEditProfile = () => setIsEditable(true);
-
   const handleResetPassword = () => router.push("/reset-password");
 
   const handleLogout = () => {
@@ -62,66 +65,92 @@ export default function ProfileScreen() {
 
   const updateProfile = async () => {
     try {
+      let uploadedUrl = capturedImage || selector.profilePic;
+      if (localPreviewUri) {
+        try {
+          showLoader("Uploading profile image...");
+          const response = await uploadMedia(localPreviewUri, "image/jpeg");
+          uploadedUrl = response?.secure_url || response?.url || response?.data?.secure_url || uploadedUrl;
+        } catch (err) {
+          console.error("upload error", err);
+          snackbar.show("error", "Image upload failed. Try again.");
+          return;
+        } finally {
+          hideLoader();
+        }
+      }
+
       const payload = {
         id: selector.userId,
         ...(user.name && { userName: user.name }),
         ...(user.email && { email: user.email }),
         ...(user.phone && { phoneNumber: user.phone }),
-        ...(capturedImage && { profilePic: capturedImage }),
+        ...(uploadedUrl && { profilePic: uploadedUrl }),
       };
+
       await AuthService.updateProfile(payload);
 
       const updateProfileDetails = {
         userName: payload.userName || selector.userName,
         email: payload.email || selector.email,
         phone: payload.phoneNumber || selector.phone,
-        profilePic: capturedImage || selector.profilePic,
+        profilePic: uploadedUrl || selector.profilePic,
       };
 
       dispatch(update(updateProfileDetails));
+      setCapturedImage(uploadedUrl);
+      setLocalPreviewUri(null);
+      setPreviewUri(null);
       setUser({ ...payload, phone: payload.phoneNumber, name: payload.userName });
       setIsEditable(false);
       snackbar.show("success", "Profile updated!");
     } catch (error) {
-      console.log('erro while updating user details: ', error);
+      console.log("erro while updating user details: ", error);
       snackbar.show("error", "Error while updating profile");
     }
   };
 
   const openCamera = async () => {
+    showLoader("Opening camera...");
     const { status } = await Camera.requestCameraPermissionsAsync();
     if (status === "granted") {
       setShowCamera(true);
     } else {
+      hideLoader();
       Alert.alert("Permission Denied", "Camera permission is required");
     }
   };
 
   const takePicture = async () => {
     try {
+      showLoader("Capturing...");
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
         base64: false,
       });
-
-      const file = {
-        uri: photo.uri,
-        name: `photo_${Date.now()}.jpg`,
-        type: "image/jpeg",
-      };
-
-      const response = await uploadMedia(file.uri, file.type);
-
-      if (response?.secure_url) {
-        setCapturedImage(response.url);
+      if (photo?.uri) {
+        setPreviewUri(photo.uri);
+        setLocalPreviewUri(photo.uri);
       } else {
-        Alert.alert("Image upload failed", "Please try again.");
+        Alert.alert("Capture failed", "Please try again.");
       }
     } catch (error) {
       console.error("Error taking picture:", error);
+      Alert.alert("Error", "Could not take picture");
     } finally {
-      setShowCamera(false);
+      hideLoader();
     }
+  };
+
+  const confirmPreview = () => {
+    setPreviewUri(null);
+    setShowCamera(false);
+  };
+
+  const cancelPreview = () => {
+    setPreviewUri(null);
+    setLocalPreviewUri(null);
+    setShowCamera(false);
   };
 
   const menuItems = [
@@ -141,26 +170,16 @@ export default function ProfileScreen() {
     }
   ];
 
+  const displayedProfileUri = localPreviewUri || capturedImage || selector.profilePic || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80";
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.profileImageContainer}>
-            <Image
-              source={{
-                uri:
-                  selector.profilePic ||
-                  capturedImage ||
-                  "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80",
-              }}
-              style={styles.profileImage}
-            />
+            <Image source={{ uri: displayedProfileUri }} style={styles.profileImage} />
             {isEditable && (
-              <TouchableOpacity
-                style={styles.editImageButton}
-                onPress={openCamera}
-              >
+              <TouchableOpacity style={styles.editImageButton} onPress={openCamera}>
                 <Ionicons name="camera" size={16} color="white" />
               </TouchableOpacity>
             )}
@@ -183,15 +202,12 @@ export default function ProfileScreen() {
             </>
           )}
 
-          <View style={{ flex: 1, flexDirection: "row", justifyContent: "space-between", alignContent: "center", alignItems: "center", gap: 10 }}>
-
-            {isEditable &&
+          <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+            {isEditable && (
               <TouchableOpacity style={styles.editProfileButton} onPress={() => setIsEditable(false)}>
-                <Text style={styles.editProfileText}>
-                  Cancel
-                </Text>
+                <Text style={styles.editProfileText}>Cancel</Text>
               </TouchableOpacity>
-            }
+            )}
 
             <TouchableOpacity
               style={styles.editProfileButton}
@@ -204,35 +220,9 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{user.ridesCreated}</Text>
-            <Text style={styles.statLabel}>Rides Created</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{user.ridesJoined}</Text>
-            <Text style={styles.statLabel}>Rides Joined</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <View style={styles.ratingContainer}>
-              <Text style={styles.statNumber}>{user.rating}</Text>
-              <Ionicons name="star" size={16} color="#FFD700" />
-            </View>
-            <Text style={styles.statLabel}>Rating</Text>
-          </View>
-        </View>
-
-        {/* Menu */}
         <View style={styles.menuContainer}>
           {menuItems.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.menuItem}
-              onPress={item.onPress}
-            >
+            <TouchableOpacity key={item.id} style={styles.menuItem} onPress={item.onPress}>
               <View style={styles.menuIconContainer}>
                 <Ionicons name={item.icon} size={24} color="#007AFF" />
               </View>
@@ -245,11 +235,7 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        {/* Buttons */}
-        <TouchableOpacity
-          style={styles.resetPasswordButton}
-          onPress={handleResetPassword}
-        >
+        <TouchableOpacity style={styles.resetPasswordButton} onPress={handleResetPassword}>
           <FontAwesome name="lock" size={22} color="#007AFF" />
           <Text style={styles.resetPasswordText}>Reset Password</Text>
         </TouchableOpacity>
@@ -262,37 +248,64 @@ export default function ProfileScreen() {
         <Text style={styles.versionText}>Version 1.0.0</Text>
       </ScrollView>
 
-      {/* Camera Modal */}
       <Modal visible={showCamera} animationType="slide">
         <View style={styles.cameraContainer}>
-          <CameraView
-            style={styles.camera}
-            ref={cameraRef}
-            facing={cameraFacing}
-            ratio="16:9"
-          />
-          <View style={styles.cameraControls}>
-            <TouchableOpacity
-              style={[styles.controlButton, { backgroundColor: "#FF3B30" }]}
-              onPress={() => setShowCamera(false)}
-            >
-              <Ionicons name="close" size={30} color="white" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.controlButton, { backgroundColor: "#007AFF" }]}
-              onPress={takePicture}
-            >
-              <Ionicons name="camera" size={30} color="white" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.controlButton, { backgroundColor: "#34C759" }]}
-              onPress={() =>
-                setCameraFacing(cameraFacing === "front" ? "back" : "front")
-              }
-            >
-              <Ionicons name="camera-reverse" size={28} color="white" />
-            </TouchableOpacity>
-          </View>
+          {previewUri ? (
+            <>
+              <Image source={{ uri: previewUri }} style={{ width: "100%", height: "80%" }} />
+              <View style={{ flexDirection: "row", justifyContent: "space-around", padding: 16 }}>
+                <TouchableOpacity
+                  style={[styles.controlButton, { backgroundColor: "#FF3B30", paddingHorizontal: 24 }]}
+                  onPress={cancelPreview}
+                >
+                  <Text style={{ color: "#fff", fontWeight: "700" }}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.controlButton, { backgroundColor: "#007AFF", paddingHorizontal: 24 }]}
+                  onPress={confirmPreview}
+                >
+                  <Text style={{ color: "#fff", fontWeight: "700" }}>Use Photo</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <>
+              <CameraView
+                style={styles.camera}
+                ref={cameraRef}
+                facing={cameraFacing}
+                ratio="16:9"
+                onCameraReady={hideLoader}
+              />
+
+              <View style={styles.cameraControls}>
+                <TouchableOpacity
+                  style={[styles.controlButton, { backgroundColor: "#FF3B30" }]}
+                  onPress={() => {
+                    hideLoader();
+                    setShowCamera(false);
+                  }}
+                >
+                  <Ionicons name="close" size={30} color="white" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.controlButton, { backgroundColor: "#007AFF" }]}
+                  onPress={takePicture}
+                >
+                  <Ionicons name="camera" size={30} color="white" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.controlButton, { backgroundColor: "#34C759" }]}
+                  onPress={() => setCameraFacing((f) => (f === "front" ? "back" : "front"))}
+                >
+                  <Ionicons name="camera-reverse" size={28} color="white" />
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
       </Modal>
 
@@ -359,20 +372,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 15,
   },
-  statsContainer: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-    paddingVertical: 20,
-    elevation: 3,
-  },
-  statItem: { flex: 1, alignItems: "center" },
-  statDivider: { width: 1, backgroundColor: "#E5E5E7" },
-  statNumber: { fontSize: 22, fontWeight: "bold", color: "#007AFF" },
-  statLabel: { fontSize: 12, color: "#666" },
-  ratingContainer: { flexDirection: "row", alignItems: "center" },
   menuContainer: {
     backgroundColor: "#fff",
     marginHorizontal: 16,
@@ -463,7 +462,7 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 50,
   },
-  snackbar: {
+  snackbar: { 
     backgroundColor: "#007AFF",
   },
 });
