@@ -136,10 +136,10 @@ const CreateRideScreen = () => {
   };
 
   const fetchRoutes = async () => {
-    if (!selectedVehicle) {
-      Alert.alert("Error", "Please select a vehicle");
-      return;
-    }
+    // if (!selectedVehicle) {
+    //   Alert.alert("Error", "Please select a vehicle");
+    //   return;
+    // }
 
     if (!selectedSource || !selectedDestination) {
       Alert.alert("Error", "Please select both source and destination");
@@ -189,7 +189,7 @@ const CreateRideScreen = () => {
 
         availableSeats: slots || 1,
         polyline: selectedRoute,
-        vehicleId: selectedVehicle.id,
+        // vehicleId: selectedVehicle.id,
       };
 
       const { data } = await RideService.createRide(selector.userId, payload);
@@ -265,10 +265,10 @@ const CreateRideScreen = () => {
       }}
     >
       <Text style={styles.suggestionMain}>
-        {vehicle.make} {vehicle.model} ({vehicle.year})
+        {vehicle.vehicleTpe}
       </Text>
       <Text style={styles.suggestionSecondary}>
-        {vehicle.plateNumber} • {vehicle.color}
+        {vehicle.VehicleNumber}
       </Text>
     </TouchableOpacity>
   );

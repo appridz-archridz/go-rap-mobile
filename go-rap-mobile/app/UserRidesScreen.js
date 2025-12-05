@@ -53,11 +53,11 @@ const UserRidesScreen = ({ route }) => {
       <Card.Content style={styles.cardContent}>
         <View style={styles.detailRow}>
           <Avatar.Icon size={24} icon="map-marker" style={styles.detailIcon} />
-          <Paragraph style={styles.detailText}>From: {item.source}</Paragraph>
+          <Paragraph style={styles.detailText}>From: {item.source.split(",").slice(0, 2).join(",").trim()}</Paragraph>
         </View>
         <View style={styles.detailRow}>
           <Avatar.Icon size={24} icon="map-marker-check" style={styles.detailIcon} />
-          <Paragraph style={styles.detailText}>To: {item.destination}</Paragraph>
+          <Paragraph style={styles.detailText}>To: {item.destination.split(",").slice(0, 2).join(",").trim()}</Paragraph>
         </View>
         <View style={styles.detailRow}>
           <Avatar.Icon size={24} icon="calendar-month-outline" style={styles.detailIcon} />
