@@ -109,9 +109,9 @@ const SignUp = () => {
           {/* Top Section */}
           <View style={styles.topContent}>
             <Image
-              source={require("../assets/images/dummy-img.png")}
+              source={require("../assets/images/gorap-logo-bg-white.png")}
               style={styles.image}
-              width={100}
+              width={150}
               height={100}
             />
             <Text style={styles.heading}>Create Your GoRap Account</Text>

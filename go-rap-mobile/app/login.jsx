@@ -248,15 +248,15 @@ const Login = () => {
             {/* Divider */}
             <View style={styles.dividerContainer}>
               <View style={styles.divider} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.divider} />
+              {/* <Text style={styles.dividerText}>OR</Text> */}
+              {/* <View style={styles.divider} /> */}
             </View>
 
             {/* Google Login */}
-            <TouchableOpacity style={styles.socialButton}>
+            {/* <TouchableOpacity style={styles.socialButton}>
               <Image style={styles.socialIcon} source={googleIcon} />
               <Text style={styles.socialButtonText}>Continue with Google</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             {/* Sign Up */}
             <View style={styles.signupContainer}>

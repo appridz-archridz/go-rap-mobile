@@ -1,21 +1,27 @@
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import * as Application from 'expo-application';
+import { Camera, CameraView } from 'expo-camera';
 import * as Device from "expo-device";
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
+  Alert,
   Image,
+  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import FilePicker from '../components/FilePicker';
 import PressableButton from '../components/PressableButton';
 import { signUp } from '../components/services/authService';
+import { uploadMedia } from '../components/services/cloudinary';
+import { useLoader } from '../components/ui/Loader';
 import { useSnackbar } from '../components/ui/SnackbarProvider';
 
 const eyeOpen = require('../assets/images/eye-open.png');
@@ -30,6 +36,13 @@ const SignUp2 = () => {
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { showLoader, hideLoader } = useLoader();
+
+  // Camera related state
+  const [cameraFacing, setCameraFacing] = useState('front'); // 'front' | 'back'
+  const [showCamera, setShowCamera] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const cameraRef = useRef(null);
 
   const customStyles = { bgColor: '#2094F3', color: '#fff' };
 
@@ -134,6 +147,84 @@ const SignUp2 = () => {
   const navigateToTermsAndCondition = () => router.push('/TermsAndConditions');
   const navigateToPrivacyPolicy = () => router.push('/PrivacyPolicy');
 
+  // --- Camera functions ---
+  const openCamera = async () => {
+    try {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      if (status === 'granted') {
+        setShowCamera(true);
+      } else {
+        Alert.alert('Permission Denied', 'Camera permission is required to take profile picture.');
+      }
+    } catch (err) {
+      console.error('Camera permission error', err);
+      Alert.alert('Error', 'Unable to access camera. Please try again.');
+    }
+  };
+
+  const takePicture = async () => {
+    showLoader();
+    try {
+      if (!cameraRef.current) {
+        console.warn('Camera ref not available');
+        return;
+      }
+
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.8,
+        base64: false,
+      });
+      setShowCamera(false);
+
+      if (!photo?.uri) {
+        Alert.alert('Capture failed', 'Could not capture image. Try again.');
+        return;
+      }
+
+      setIsUploading(true);
+
+      const file = {
+        uri: photo.uri,
+        name: `photo_${Date.now()}.jpg`,
+        type: 'image/jpeg',
+      };
+
+      const response = await uploadMedia(file.uri, file.type);
+
+      const uploadedUrl = response?.secure_url || response?.url || response?.data?.secure_url;
+
+      if (uploadedUrl) {
+        setProfilePic({ uri: uploadedUrl });
+        validateField('profilePic', { uri: uploadedUrl });
+      } else {
+        Alert.alert('Upload failed', 'Image upload failed. Please try again.');
+      }
+
+    } catch (error) {
+      console.error('Error taking/uploading picture:', error);
+      Alert.alert('Error', 'Failed to take or upload picture. Try again.');
+    } finally {
+      setIsUploading(false);
+      setShowCamera(false);
+      hideLoader();
+
+    }
+  };
+
+  // Optionally render a small preview for chosen image
+  const renderProfilePreview = () => {
+    const uri = profilePic?.uri;
+    if (!uri) return null;
+    return (
+      <View style={[styles.previewContainer, styles.inputWithCross]}>
+        <Image source={{ uri }} style={styles.previewImage} />
+        <TouchableOpacity onPress={() => setProfilePic(null)} style={styles.clearButton}>
+          <FontAwesome name="times" size={26} color="red" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAwareScrollView
@@ -147,12 +238,29 @@ const SignUp2 = () => {
             {/* Profile Pic */}
             <View style={styles.container}>
               <Text style={styles.label}>Upload Profile Pic</Text>
-              <FilePicker
-                onFileSelected={(file) => {
-                  setProfilePic(file);
-                  validateField('profilePic', file);
-                }}
-              />
+
+              <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', width: '95%' }}>
+                {
+                  !profilePic?.uri &&
+                  <FilePicker
+                    onFileSelected={(file) => {
+                      setProfilePic(file);
+                      validateField('profilePic', file);
+                    }}
+                  />
+
+                }
+                {
+                  !profilePic?.uri &&
+                  <TouchableOpacity style={styles.cameraButton} onPress={openCamera}>
+                    <Ionicons name="camera" size={20} color="#fff" />
+                  </TouchableOpacity>
+                }
+
+                {/* preview */}
+                {renderProfilePreview()}
+              </View>
+
               {errors.profilePic && <Text style={styles.error}>{errors.profilePic}</Text>}
             </View>
 
@@ -235,6 +343,40 @@ const SignUp2 = () => {
 
         </ScrollView>
       </KeyboardAwareScrollView>
+
+      {/* Camera Modal */}
+      <Modal visible={showCamera} animationType="slide">
+        <View style={styles.cameraContainer}>
+          <CameraView
+            style={styles.camera}
+            ref={cameraRef}
+            facing={cameraFacing}
+            ratio="16:9"
+          />
+          <View style={styles.cameraControls}>
+            <TouchableOpacity
+              style={[styles.controlButton, { backgroundColor: "#FF3B30" }]}
+              onPress={() => setShowCamera(false)}
+            >
+              <Ionicons name="close" size={30} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.controlButton, { backgroundColor: "#007AFF" }]}
+              onPress={takePicture}
+            >
+              <Ionicons name="camera" size={30} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.controlButton, { backgroundColor: "#34C759" }]}
+              onPress={() =>
+                setCameraFacing(cameraFacing === "front" ? "back" : "front")
+              }
+            >
+              <Ionicons name="camera-reverse" size={28} color="white" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -317,5 +459,53 @@ const styles = StyleSheet.create({
     color: 'red',
     fontSize: 12,
     marginTop: 4,
+  },
+
+  /* Camera styles */
+  cameraContainer: {
+    flex: 1,
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  camera: {
+    flex: 1,
+    width: "100%",
+  },
+  cameraControls: {
+    position: "absolute",
+    bottom: 50,
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "space-evenly",
+    alignItems: "center",
+  },
+  controlButton: {
+    padding: 18,
+    borderRadius: 50,
+  },
+  cameraButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2094F3',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 50,
+  },
+
+  previewContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginLeft: 8,
+  },
+  previewImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ECEBF0',
   },
 });
