@@ -14,14 +14,16 @@ const UserRidesScreen = ({ route }) => {
     try {
       setLoading(true);
       const response = await getRidesByUser(userId);
-      console.log("ee", response.data.data)
       setRides(response.data.data || []);
     } catch (error) {
-      console.error("Error fetching rides:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
+  };
+  const handleEditRide= (rideId) => {
+    // Navigate to the edit ride screen with the selected rideId
+    router.push(`/create-ride/${rideId}`);
   };
 
   useEffect(() => {
@@ -73,16 +75,16 @@ const UserRidesScreen = ({ route }) => {
         </View>
       </Card.Content>
 
-      <Card.Actions style={styles.cardActions}>
+      {/* <Card.Actions style={styles.cardActions}>
         <Button
           mode="contained"
-          onPress={() => console.log("Edit ride", item.id)}
+          onPress={handleEditRide}
           style={styles.editButton}
           labelStyle={styles.buttonLabel}
         >
           Edit Ride
         </Button>
-      </Card.Actions>
+      </Card.Actions> */}
     </Card>
   );
 

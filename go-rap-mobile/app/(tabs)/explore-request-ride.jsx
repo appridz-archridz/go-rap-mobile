@@ -124,7 +124,7 @@ const ExploreRequestRide = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Explore Rides</Text>
+        <Text style={styles.headerTitle}>Explore Requested Rides</Text>
       </View>
       <Text style={styles.headerSubtitle}>Find a ride</Text>
 

@@ -1,38 +1,58 @@
-import { FontAwesome } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Picker } from '@react-native-picker/picker';
-import { useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from 'react';
-import { Alert, Image, Keyboard, KeyboardAvoidingView, Platform, TextInput as RNTextInput, ScrollView, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { FontAwesome } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Picker } from "@react-native-picker/picker";
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  Alert,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  TextInput as RNTextInput,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
 import { useSelector } from "react-redux";
-import FilePicker from '../components/FilePicker';
+import FilePicker from "../components/FilePicker";
 import { clearButton, inputField, inputWithCross } from "../global-css";
-import { createVehicle, getVehicleById, updateVehicle } from "../services/vehicle-service";
+import {
+  createVehicle,
+  getVehicleById,
+  updateVehicle,
+} from "../services/vehicle-service";
 
-const VehicleInfoFormScreen = ({ navigation }) => {
+const VehicleInfoFormScreen = () => {
   const [formData, setFormData] = useState({
-    vehicleType: 'Car',
-    vehicleNumber: '',
-    dlNumber: '',
+    vehicleType: "Car",
+    vehicleNumber: "",
+    dlNumber: "",
     dlExpiry: new Date(),
-    insurancePolicyNumber: '',
+    insurancePolicyNumber: "",
     insuranceExpiry: new Date(),
     isCommercialInsurance: false,
-    pucNumber: '',
+    pucNumber: "",
     pucExpiry: new Date(),
-    permitNumber: '',
+    permitNumber: "",
     permitExpiry: new Date(),
-    idProofNumber: '',
+    idProofNumber: "",
     vehicleFrontPhoto: null,
     consentGiven: false,
   });
 
   const [showAdditionalInfo, setShowAdditionalInfo] = useState(false);
   const [showDlExpiryPicker, setShowDlExpiryPicker] = useState(false);
-  const [showInsuranceExpiryPicker, setShowInsuranceExpiryPicker] = useState(false);
+  const [showInsuranceExpiryPicker, setShowInsuranceExpiryPicker] =
+    useState(false);
   const [showPucExpiryPicker, setShowPucExpiryPicker] = useState(false);
   const [showPermitExpiryPicker, setShowPermitExpiryPicker] = useState(false);
-  const { vehicleId } = useLocalSearchParams();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { vehicleId, returnTo } = useLocalSearchParams();
   const isEdit = !!vehicleId;
   const userId = useSelector((state) => state.auth.userId);
 
@@ -52,31 +72,69 @@ const VehicleInfoFormScreen = ({ navigation }) => {
   };
 
   const handleSubmit = async () => {
+    // Prevent double submission
+    if (isSubmitting) return;
+
     try {
-      if (!formData.vehicleType || !formData.vehicleNumber || !formData.dlNumber || !formData.consentGiven) {
-        Alert.alert("Error", "Please fill all mandatory fields and give consent.");
+      if (
+        !formData.vehicleType ||
+        !formData.vehicleNumber ||
+        !formData.dlNumber ||
+        !formData.consentGiven
+      ) {
+        Alert.alert(
+          "Error",
+          "Please fill all mandatory fields and give consent."
+        );
         return;
       }
+
+      setIsSubmitting(true);
 
       const payload = {
         ...formData,
         vehicleFrontPhotoUrl: formData.vehicleFrontPhoto?.uri || null,
       };
-      console.log("userId", userId)
-      console.log("payload", payload)
+
       let response = isEdit
         ? await updateVehicle(vehicleId, payload)
         : await createVehicle(userId, payload);
-      console.log("response", typeof response.status)
-      if (response.status == 201) {
-        Alert.alert("Success", isEdit ? "Vehicle updated!" : "Vehicle created!");
-        navigation.goBack();
+
+      console.log("response status:", response.status);
+
+      if (response.status === 201 || response.status === 200) {
+        const successMessage = isEdit
+          ? "Vehicle updated successfully!"
+          : "Vehicle created successfully!";
+
+        Alert.alert("Success", successMessage, [
+          {
+            text: "OK",
+            onPress: () => {
+              // Navigate based on where user came from
+              if (returnTo === "create-ride") {
+                router.push("/create-ride");
+              } else if (isEdit) {
+                router.back();
+              } else {
+                // For new vehicle creation, go to create ride page
+                router.push("/create-ride");
+              }
+            },
+          },
+        ]);
       } else {
-        Alert.alert("Error", response.data.message || "Something went wrong.");
+        Alert.alert("Error", response.data?.message || "Something went wrong.");
       }
     } catch (error) {
-      Alert.alert("Error", "Submit failed.");
-      console.log(error);
+      console.error("Submit failed:", error);
+      Alert.alert(
+        "Error",
+        error.response?.data?.message ||
+          "Failed to submit vehicle information. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -93,22 +151,30 @@ const VehicleInfoFormScreen = ({ navigation }) => {
             data.vehicle.idProofNumber ||
             data.vehicle.vehicleFrontPhotoUrl
           );
-          
+
           setShowAdditionalInfo(hasAdditionalInfo);
-          
+
           setFormData({
-            vehicleType: data.vehicle.vehicleType || 'Car',
-            vehicleNumber: data.vehicle.vehicleNumber || '',
-            dlNumber: data.vehicle.dlNumber || '',
-            dlExpiry: data.vehicle.dlExpiry ? new Date(data.vehicle.dlExpiry) : new Date(),
-            insurancePolicyNumber: data.vehicle.insurancePolicyNumber || '',
-            insuranceExpiry: data.vehicle.insuranceExpiry ? new Date(data.vehicle.insuranceExpiry) : new Date(),
+            vehicleType: data.vehicle.vehicleType || "Car",
+            vehicleNumber: data.vehicle.vehicleNumber || "",
+            dlNumber: data.vehicle.dlNumber || "",
+            dlExpiry: data.vehicle.dlExpiry
+              ? new Date(data.vehicle.dlExpiry)
+              : new Date(),
+            insurancePolicyNumber: data.vehicle.insurancePolicyNumber || "",
+            insuranceExpiry: data.vehicle.insuranceExpiry
+              ? new Date(data.vehicle.insuranceExpiry)
+              : new Date(),
             isCommercialInsurance: data.vehicle.isCommercialInsurance || false,
-            pucNumber: data.vehicle.pucNumber || '',
-            pucExpiry: data.vehicle.pucExpiry ? new Date(data.vehicle.pucExpiry) : new Date(),
-            permitNumber: data.vehicle.permitNumber || '',
-            permitExpiry: data.vehicle.permitExpiry ? new Date(data.vehicle.permitExpiry) : new Date(),
-            idProofNumber: data.vehicle.idProofNumber || '',
+            pucNumber: data.vehicle.pucNumber || "",
+            pucExpiry: data.vehicle.pucExpiry
+              ? new Date(data.vehicle.pucExpiry)
+              : new Date(),
+            permitNumber: data.vehicle.permitNumber || "",
+            permitExpiry: data.vehicle.permitExpiry
+              ? new Date(data.vehicle.permitExpiry)
+              : new Date(),
+            idProofNumber: data.vehicle.idProofNumber || "",
             vehicleFrontPhoto: data.vehicle.vehicleFrontPhotoUrl
               ? { uri: data.vehicle.vehicleFrontPhotoUrl }
               : null,
@@ -116,7 +182,8 @@ const VehicleInfoFormScreen = ({ navigation }) => {
           });
         }
       } catch (error) {
-        console.log("Failed to load vehicle:", error);
+        console.error("Failed to load vehicle:", error);
+        Alert.alert("Error", "Failed to load vehicle information.");
       }
     };
 
@@ -131,8 +198,13 @@ const VehicleInfoFormScreen = ({ navigation }) => {
       style={{ flex: 1, backgroundColor: "#f8fafc" }}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>Vehicle Information</Text>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.title}>
+            {isEdit ? "Edit Vehicle" : "Add Vehicle Information"}
+          </Text>
 
           {/* Vehicle Type Dropdown */}
           <View style={{ marginBottom: 15 }}>
@@ -140,7 +212,9 @@ const VehicleInfoFormScreen = ({ navigation }) => {
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={formData.vehicleType}
-                onValueChange={(value) => handleInputChange('vehicleType', value)}
+                onValueChange={(value) =>
+                  handleInputChange("vehicleType", value)
+                }
                 style={styles.picker}
               >
                 <Picker.Item label="Car" value="Car" />
@@ -157,12 +231,18 @@ const VehicleInfoFormScreen = ({ navigation }) => {
             <View style={inputWithCross}>
               <RNTextInput
                 style={inputField}
-                placeholder="Enter Vehicle Number"
+                placeholder="Enter Vehicle Number (e.g., AP16TS2001)"
                 value={formData.vehicleNumber}
-                onChangeText={(value) => handleInputChange('vehicleNumber', value)}
+                onChangeText={(value) =>
+                  handleInputChange("vehicleNumber", value.toUpperCase())
+                }
+                autoCapitalize="characters"
               />
               {formData.vehicleNumber.length > 0 && (
-                <TouchableOpacity onPress={() => handleInputChange('vehicleNumber', '')} style={clearButton}>
+                <TouchableOpacity
+                  onPress={() => handleInputChange("vehicleNumber", "")}
+                  style={clearButton}
+                >
                   <FontAwesome name="times-circle" size={20} color="#999" />
                 </TouchableOpacity>
               )}
@@ -175,12 +255,15 @@ const VehicleInfoFormScreen = ({ navigation }) => {
             <View style={inputWithCross}>
               <RNTextInput
                 style={inputField}
-                placeholder="Enter DL Number"
+                placeholder="Enter Driving License Number"
                 value={formData.dlNumber}
-                onChangeText={(value) => handleInputChange('dlNumber', value)}
+                onChangeText={(value) => handleInputChange("dlNumber", value)}
               />
               {formData.dlNumber.length > 0 && (
-                <TouchableOpacity onPress={() => handleInputChange('dlNumber', '')} style={clearButton}>
+                <TouchableOpacity
+                  onPress={() => handleInputChange("dlNumber", "")}
+                  style={clearButton}
+                >
                   <FontAwesome name="times-circle" size={20} color="#999" />
                 </TouchableOpacity>
               )}
@@ -190,8 +273,13 @@ const VehicleInfoFormScreen = ({ navigation }) => {
           {/* DL Expiry */}
           <View style={{ marginBottom: 15 }}>
             <Text style={styles.label}>DL Expiry *</Text>
-            <TouchableOpacity style={styles.dateField} onPress={() => setShowDlExpiryPicker(true)}>
-              <Text style={styles.dateText}>{formData.dlExpiry.toDateString()}</Text>
+            <TouchableOpacity
+              style={styles.dateField}
+              onPress={() => setShowDlExpiryPicker(true)}
+            >
+              <Text style={styles.dateText}>
+                {formData.dlExpiry.toDateString()}
+              </Text>
               <FontAwesome name="calendar" size={20} color="#0051a8" />
             </TouchableOpacity>
           </View>
@@ -203,7 +291,9 @@ const VehicleInfoFormScreen = ({ navigation }) => {
               onPress={() => setShowAdditionalInfo(true)}
             >
               <FontAwesome name="plus-circle" size={20} color="#0051a8" />
-              <Text style={styles.addMoreText}>Add More Information</Text>
+              <Text style={styles.addMoreText}>
+                Add More Information (Optional)
+              </Text>
             </TouchableOpacity>
           )}
 
@@ -222,10 +312,17 @@ const VehicleInfoFormScreen = ({ navigation }) => {
                     style={inputField}
                     placeholder="Enter Insurance Policy Number"
                     value={formData.insurancePolicyNumber}
-                    onChangeText={(value) => handleInputChange('insurancePolicyNumber', value)}
+                    onChangeText={(value) =>
+                      handleInputChange("insurancePolicyNumber", value)
+                    }
                   />
                   {formData.insurancePolicyNumber.length > 0 && (
-                    <TouchableOpacity onPress={() => handleInputChange('insurancePolicyNumber', '')} style={clearButton}>
+                    <TouchableOpacity
+                      onPress={() =>
+                        handleInputChange("insurancePolicyNumber", "")
+                      }
+                      style={clearButton}
+                    >
                       <FontAwesome name="times-circle" size={20} color="#999" />
                     </TouchableOpacity>
                   )}
@@ -234,8 +331,13 @@ const VehicleInfoFormScreen = ({ navigation }) => {
 
               <View style={{ marginBottom: 15 }}>
                 <Text style={styles.label}>Insurance Expiry</Text>
-                <TouchableOpacity style={styles.dateField} onPress={() => setShowInsuranceExpiryPicker(true)}>
-                  <Text style={styles.dateText}>{formData.insuranceExpiry.toDateString()}</Text>
+                <TouchableOpacity
+                  style={styles.dateField}
+                  onPress={() => setShowInsuranceExpiryPicker(true)}
+                >
+                  <Text style={styles.dateText}>
+                    {formData.insuranceExpiry.toDateString()}
+                  </Text>
                   <FontAwesome name="calendar" size={20} color="#0051a8" />
                 </TouchableOpacity>
               </View>
@@ -244,10 +346,25 @@ const VehicleInfoFormScreen = ({ navigation }) => {
                 <Text style={styles.label}>Is Commercial Insurance?</Text>
                 <TouchableOpacity
                   style={styles.toggleField}
-                  onPress={() => handleInputChange('isCommercialInsurance', !formData.isCommercialInsurance)}
+                  onPress={() =>
+                    handleInputChange(
+                      "isCommercialInsurance",
+                      !formData.isCommercialInsurance
+                    )
+                  }
                 >
-                  <Text style={styles.toggleText}>{formData.isCommercialInsurance ? 'Yes' : 'No'}</Text>
-                  <FontAwesome name={formData.isCommercialInsurance ? 'toggle-on' : 'toggle-off'} size={24} color="#0051a8" />
+                  <Text style={styles.toggleText}>
+                    {formData.isCommercialInsurance ? "Yes" : "No"}
+                  </Text>
+                  <FontAwesome
+                    name={
+                      formData.isCommercialInsurance
+                        ? "toggle-on"
+                        : "toggle-off"
+                    }
+                    size={24}
+                    color="#0051a8"
+                  />
                 </TouchableOpacity>
               </View>
 
@@ -263,10 +380,15 @@ const VehicleInfoFormScreen = ({ navigation }) => {
                     style={inputField}
                     placeholder="Enter PUC Number"
                     value={formData.pucNumber}
-                    onChangeText={(value) => handleInputChange('pucNumber', value)}
+                    onChangeText={(value) =>
+                      handleInputChange("pucNumber", value)
+                    }
                   />
                   {formData.pucNumber.length > 0 && (
-                    <TouchableOpacity onPress={() => handleInputChange('pucNumber', '')} style={clearButton}>
+                    <TouchableOpacity
+                      onPress={() => handleInputChange("pucNumber", "")}
+                      style={clearButton}
+                    >
                       <FontAwesome name="times-circle" size={20} color="#999" />
                     </TouchableOpacity>
                   )}
@@ -275,8 +397,13 @@ const VehicleInfoFormScreen = ({ navigation }) => {
 
               <View style={{ marginBottom: 15 }}>
                 <Text style={styles.label}>PUC Expiry</Text>
-                <TouchableOpacity style={styles.dateField} onPress={() => setShowPucExpiryPicker(true)}>
-                  <Text style={styles.dateText}>{formData.pucExpiry.toDateString()}</Text>
+                <TouchableOpacity
+                  style={styles.dateField}
+                  onPress={() => setShowPucExpiryPicker(true)}
+                >
+                  <Text style={styles.dateText}>
+                    {formData.pucExpiry.toDateString()}
+                  </Text>
                   <FontAwesome name="calendar" size={20} color="#0051a8" />
                 </TouchableOpacity>
               </View>
@@ -293,10 +420,15 @@ const VehicleInfoFormScreen = ({ navigation }) => {
                     style={inputField}
                     placeholder="Enter Permit Number"
                     value={formData.permitNumber}
-                    onChangeText={(value) => handleInputChange('permitNumber', value)}
+                    onChangeText={(value) =>
+                      handleInputChange("permitNumber", value)
+                    }
                   />
                   {formData.permitNumber.length > 0 && (
-                    <TouchableOpacity onPress={() => handleInputChange('permitNumber', '')} style={clearButton}>
+                    <TouchableOpacity
+                      onPress={() => handleInputChange("permitNumber", "")}
+                      style={clearButton}
+                    >
                       <FontAwesome name="times-circle" size={20} color="#999" />
                     </TouchableOpacity>
                   )}
@@ -305,8 +437,13 @@ const VehicleInfoFormScreen = ({ navigation }) => {
 
               <View style={{ marginBottom: 15 }}>
                 <Text style={styles.label}>Permit Expiry</Text>
-                <TouchableOpacity style={styles.dateField} onPress={() => setShowPermitExpiryPicker(true)}>
-                  <Text style={styles.dateText}>{formData.permitExpiry.toDateString()}</Text>
+                <TouchableOpacity
+                  style={styles.dateField}
+                  onPress={() => setShowPermitExpiryPicker(true)}
+                >
+                  <Text style={styles.dateText}>
+                    {formData.permitExpiry.toDateString()}
+                  </Text>
                   <FontAwesome name="calendar" size={20} color="#0051a8" />
                 </TouchableOpacity>
               </View>
@@ -323,10 +460,15 @@ const VehicleInfoFormScreen = ({ navigation }) => {
                     style={inputField}
                     placeholder="Enter ID Proof Number"
                     value={formData.idProofNumber}
-                    onChangeText={(value) => handleInputChange('idProofNumber', value)}
+                    onChangeText={(value) =>
+                      handleInputChange("idProofNumber", value)
+                    }
                   />
                   {formData.idProofNumber.length > 0 && (
-                    <TouchableOpacity onPress={() => handleInputChange('idProofNumber', '')} style={clearButton}>
+                    <TouchableOpacity
+                      onPress={() => handleInputChange("idProofNumber", "")}
+                      style={clearButton}
+                    >
                       <FontAwesome name="times-circle" size={20} color="#999" />
                     </TouchableOpacity>
                   )}
@@ -357,18 +499,35 @@ const VehicleInfoFormScreen = ({ navigation }) => {
           <View style={{ marginBottom: 15 }}>
             <TouchableOpacity
               style={styles.checkboxField}
-              onPress={() => handleInputChange('consentGiven', !formData.consentGiven)}
+              onPress={() =>
+                handleInputChange("consentGiven", !formData.consentGiven)
+              }
             >
-              <FontAwesome name={formData.consentGiven ? 'check-square-o' : 'square-o'} size={24} color="#0051a8" />
+              <FontAwesome
+                name={formData.consentGiven ? "check-square-o" : "square-o"}
+                size={24}
+                color="#0051a8"
+              />
               <Text style={styles.consentText}>
-                I give consent for the processing of my personal data as per the terms and conditions. *
+                I give consent for the processing of my personal data as per the
+                terms and conditions. *
               </Text>
             </TouchableOpacity>
           </View>
 
           {/* Submit Button */}
-          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-            <Text style={styles.submitText}>Submit Vehicle Info</Text>
+          <TouchableOpacity
+            style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.submitText}>
+              {isSubmitting
+                ? "Submitting..."
+                : isEdit
+                ? "Update Vehicle Info"
+                : "Submit Vehicle Info"}
+            </Text>
           </TouchableOpacity>
 
           {/* Date Pickers */}
@@ -377,7 +536,10 @@ const VehicleInfoFormScreen = ({ navigation }) => {
               value={formData.dlExpiry}
               mode="date"
               display="default"
-              onChange={(event, date) => handleDateChange('dlExpiry', event, date)}
+              minimumDate={new Date()}
+              onChange={(event, date) =>
+                handleDateChange("dlExpiry", event, date)
+              }
             />
           )}
           {showInsuranceExpiryPicker && (
@@ -385,7 +547,10 @@ const VehicleInfoFormScreen = ({ navigation }) => {
               value={formData.insuranceExpiry}
               mode="date"
               display="default"
-              onChange={(event, date) => handleDateChange('insuranceExpiry', event, date)}
+              minimumDate={new Date()}
+              onChange={(event, date) =>
+                handleDateChange("insuranceExpiry", event, date)
+              }
             />
           )}
           {showPucExpiryPicker && (
@@ -393,7 +558,10 @@ const VehicleInfoFormScreen = ({ navigation }) => {
               value={formData.pucExpiry}
               mode="date"
               display="default"
-              onChange={(event, date) => handleDateChange('pucExpiry', event, date)}
+              minimumDate={new Date()}
+              onChange={(event, date) =>
+                handleDateChange("pucExpiry", event, date)
+              }
             />
           )}
           {showPermitExpiryPicker && (
@@ -401,7 +569,10 @@ const VehicleInfoFormScreen = ({ navigation }) => {
               value={formData.permitExpiry}
               mode="date"
               display="default"
-              onChange={(event, date) => handleDateChange('permitExpiry', event, date)}
+              minimumDate={new Date()}
+              onChange={(event, date) =>
+                handleDateChange("permitExpiry", event, date)
+              }
             />
           )}
         </ScrollView>
@@ -414,14 +585,26 @@ export default VehicleInfoFormScreen;
 
 const styles = StyleSheet.create({
   container: { padding: 20, paddingBottom: 40 },
-  title: { fontSize: 26, fontWeight: "bold", color: "#003366", textAlign: "center", marginBottom: 20 },
-  sectionTitle: { fontSize: 20, fontWeight: '600', color: '#333', marginVertical: 10 },
+  title: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "#003366",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#333",
+    marginVertical: 10,
+  },
   label: { fontSize: 15, fontWeight: "600", color: "#333", marginBottom: 5 },
   pickerContainer: {
     borderWidth: 1,
     borderColor: "#ECEBF0",
     borderRadius: 10,
-    overflow: 'hidden',
+    overflow: "hidden",
+    backgroundColor: "#fff",
   },
   picker: {
     height: 50,
@@ -435,6 +618,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 12,
+    backgroundColor: "#fff",
   },
   dateText: { fontSize: 15, color: "#000" },
   toggleField: {
@@ -446,6 +630,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 12,
+    backgroundColor: "#fff",
   },
   toggleText: { fontSize: 15, color: "#000" },
   checkboxField: {
@@ -454,30 +639,30 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   photoPreview: {
-    width: '100%',
+    width: "100%",
     height: 200,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginVertical: 10,
     borderRadius: 10,
   },
   separator: {
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: "#E0E0E0",
     marginVertical: 15,
   },
   consentText: {
     fontSize: 14,
-    color: '#555',
+    color: "#555",
     flex: 1,
     marginLeft: 8,
   },
   addMoreBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f0f7ff',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f0f7ff",
     borderWidth: 1,
-    borderColor: '#0051a8',
+    borderColor: "#0051a8",
     borderRadius: 10,
     paddingVertical: 12,
     marginVertical: 15,
@@ -485,9 +670,24 @@ const styles = StyleSheet.create({
   },
   addMoreText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#0051a8',
+    fontWeight: "600",
+    color: "#0051a8",
   },
-  submitBtn: { backgroundColor: "#0051a8", borderRadius: 10, paddingVertical: 14, alignItems: "center", marginTop: 15, marginBottom: 25 },
-  submitText: { color: "#fff", fontSize: 17, fontWeight: "700" },
+  submitBtn: {
+    backgroundColor: "#0051a8",
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 15,
+    marginBottom: 25,
+  },
+  submitBtnDisabled: {
+    backgroundColor: "#6b8db3",
+    opacity: 0.7,
+  },
+  submitText: {
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "700",
+  },
 });

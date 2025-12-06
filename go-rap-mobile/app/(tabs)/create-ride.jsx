@@ -136,10 +136,10 @@ const CreateRideScreen = () => {
   };
 
   const fetchRoutes = async () => {
-    // if (!selectedVehicle) {
-    //   Alert.alert("Error", "Please select a vehicle");
-    //   return;
-    // }
+    if (!selectedVehicle) {
+      Alert.alert("Error", "Please select a vehicle");
+      return;
+    }
 
     if (!selectedSource || !selectedDestination) {
       Alert.alert("Error", "Please select both source and destination");
@@ -175,6 +175,7 @@ const CreateRideScreen = () => {
 
   const createRide = async () => {
     try {
+      console.log("vechicle ",selectedVehicle)
       const payload = {
         startPoint: selectedSource.description,
         startLatitude: selectedSource.geometry.location.lat,
@@ -189,7 +190,8 @@ const CreateRideScreen = () => {
 
         availableSeats: slots || 1,
         polyline: selectedRoute,
-        // vehicleId: selectedVehicle.id,
+        vehicleId: selectedVehicle.id,
+        vehicleType: selectedVehicle.vehicleType || "Car", // Fallback to "Car" if vehicleType not available
       };
 
       const { data } = await RideService.createRide(selector.userId, payload);
@@ -202,6 +204,7 @@ const CreateRideScreen = () => {
       }
       else Alert.alert("Error", data.message || "Something went wrong");
     } catch (error) {
+      console.error("Error creating ride:", error);
       Alert.alert("Error", "Failed to create ride");
     } finally {
       setLoading(false);
@@ -218,7 +221,7 @@ const CreateRideScreen = () => {
     setRideDate(new Date());
     setRideTime(new Date());
     setSlots(1);
-    setSelectedVehicle(null);
+    // Don't reset selectedVehicle - keep the last selected vehicle
   };
 
   useEffect(() => {
@@ -265,11 +268,13 @@ const CreateRideScreen = () => {
       }}
     >
       <Text style={styles.suggestionMain}>
-        {vehicle.vehicleTpe}
+        {vehicle.vehicleType || "Vehicle"} - {vehicle.vehicleNumber}
       </Text>
-      <Text style={styles.suggestionSecondary}>
-        {vehicle.VehicleNumber}
-      </Text>
+      {vehicle.dlNumber && (
+        <Text style={styles.suggestionSecondary}>
+          DL: {vehicle.dlNumber}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 
@@ -306,7 +311,7 @@ const CreateRideScreen = () => {
             >
               <Text style={[styles.dateText, !selectedVehicle && styles.placeholderText]}>
                 {selectedVehicle 
-                  ? `${selectedVehicle.make} ${selectedVehicle.model} (${selectedVehicle.plateNumber})`
+                  ? `${selectedVehicle.vehicleType || "Vehicle"} - ${selectedVehicle.vehicleNumber}`
                   : "Select a vehicle"
                 }
               </Text>

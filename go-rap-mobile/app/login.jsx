@@ -115,7 +115,6 @@ const Login = () => {
         dispatch(login(stateData));
         setIsSnackbarVisible(true);
         Snackbar.show("success", "Log in succesfull");
-        console.log("Login successfull!!!");
         router.push("/search-ride");
       } else {
         console.log("Login failed:", data.message);
@@ -228,14 +227,7 @@ const Login = () => {
               </TouchableOpacity>
 
               {/* Forgot Password */}
-              <TouchableOpacity
-                style={styles.forgotPasswordButton}
-                onPress={() => {
-                  router.push("/reset-password");
-                }}
-              >
-                <Text style={styles.forgotPasswordText}>Reset Password?</Text>
-              </TouchableOpacity>
+
             </View>
 
             {/* Login Button */}
