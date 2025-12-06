@@ -21,6 +21,7 @@ import { useSelector } from "react-redux";
 import { clearButton, inputField, inputWithCross } from "../../global-css";
 import { olaService } from "../../services/thirdPartyApis";
 import { RideService } from './../../services/ride-service';
+import { getUserVehicles } from './../../services/vehicle-service';
 
 const CreateRideScreen = () => {
   const [source, setSource] = useState("");
@@ -41,11 +42,61 @@ const CreateRideScreen = () => {
   const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
   const [isCreatingRide, setIsCreatingRide] = useState(false);
   const [path, setPath] = useState('');
+  
+  // Vehicle related states
+  const [vehicles, setVehicles] = useState([]);
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [showVehicleDropdown, setShowVehicleDropdown] = useState(false);
+  const [loadingVehicles, setLoadingVehicles] = useState(true);
 
   const sourceDebounceRef = useRef(null);
   const destinationDebounceRef = useRef(null);
 
   const selector = useSelector((state) => state.auth);
+
+  // Fetch user vehicles on component mount
+  useEffect(() => {
+    fetchUserVehicles();
+  }, []);
+
+  const fetchUserVehicles = async () => {
+    try {
+      setLoadingVehicles(true);
+      const { data } = await getUserVehicles(selector.userId);
+      
+      if (data.data.length > 0) {
+        setVehicles(data.data);
+        setSelectedVehicle(data.data[0]);
+      } else {
+        Alert.alert(
+          "No Vehicle Found",
+          "You need to add at least one vehicle to create a ride. Would you like to add a vehicle now?",
+          [
+            { text: "Cancel", style: "cancel" },
+            { 
+              text: "Add Vehicle", 
+              onPress: () => router.push("/vehicle-information") 
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching vehicles:", error);
+      Alert.alert(
+        "Error",
+        "Failed to fetch your vehicles. Please try again or add a vehicle.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { 
+            text: "Add Vehicle", 
+            onPress: () => router.push("/vehicle-information") 
+          }
+        ]
+      );
+    } finally {
+      setLoadingVehicles(false);
+    }
+  };
 
   // Handle source input change
   const handleSourceChange = (text) => {
@@ -85,11 +136,16 @@ const CreateRideScreen = () => {
   };
 
   const fetchRoutes = async () => {
+    // if (!selectedVehicle) {
+    //   Alert.alert("Error", "Please select a vehicle");
+    //   return;
+    // }
 
     if (!selectedSource || !selectedDestination) {
       Alert.alert("Error", "Please select both source and destination");
       return;
     }
+    
     try {
       const from = selectedSource.geometry.location;
       const to = selectedDestination.geometry.location;
@@ -128,12 +184,12 @@ const CreateRideScreen = () => {
         destinationLatitude: selectedDestination.geometry.location.lat,
         destinationLongitude: selectedDestination.geometry.location.lng,
 
-        rideDate: rideDate.toISOString().split("T")[0], // yyyy-MM-dd
-        rideTime: rideTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }), // HH:mm
+        rideDate: rideDate.toISOString().split("T")[0],
+        rideTime: rideTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }),
 
         availableSeats: slots || 1,
         polyline: selectedRoute,
-
+        // vehicleId: selectedVehicle.id,
       };
 
       const { data } = await RideService.createRide(selector.userId, payload);
@@ -146,7 +202,7 @@ const CreateRideScreen = () => {
       }
       else Alert.alert("Error", data.message || "Something went wrong");
     } catch (error) {
-      Alert.alert("Error", "Failed to create ride",);
+      Alert.alert("Error", "Failed to create ride");
     } finally {
       setLoading(false);
     }
@@ -162,7 +218,8 @@ const CreateRideScreen = () => {
     setRideDate(new Date());
     setRideTime(new Date());
     setSlots(1);
-  }
+    setSelectedVehicle(null);
+  };
 
   useEffect(() => {
     if (selectedRoute && isCreatingRide && selectedSource && selectedDestination) {
@@ -198,6 +255,33 @@ const CreateRideScreen = () => {
     </TouchableOpacity>
   );
 
+  const renderVehicleItem = (vehicle) => (
+    <TouchableOpacity
+      key={vehicle.id}
+      style={styles.dropdownItem}
+      onPress={() => {
+        setSelectedVehicle(vehicle);
+        setShowVehicleDropdown(false);
+      }}
+    >
+      <Text style={styles.suggestionMain}>
+        {vehicle.vehicleTpe}
+      </Text>
+      <Text style={styles.suggestionSecondary}>
+        {vehicle.VehicleNumber}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  if (loadingVehicles) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', flex: 1 }]}>
+        <ActivityIndicator size="large" color="#0051a8" />
+        <Text style={{ marginTop: 10, color: '#666' }}>Loading vehicles...</Text>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -207,8 +291,43 @@ const CreateRideScreen = () => {
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <Text style={styles.title}>Create Ride</Text>
 
-          {/* from */}
-          <View style={{ marginBottom: 15 }}>
+          {/* Vehicle Selection */}
+          <View style={{ marginBottom: 15, zIndex: 3000 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={styles.label}>Select Vehicle</Text>
+              <TouchableOpacity onPress={() => router.push("/vehicle-information")}>
+                <Text style={styles.addVehicleLink}>+ Add Vehicle</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <TouchableOpacity 
+              style={[styles.dateField, !selectedVehicle && styles.placeholderField]}
+              onPress={() => setShowVehicleDropdown(!showVehicleDropdown)}
+            >
+              <Text style={[styles.dateText, !selectedVehicle && styles.placeholderText]}>
+                {selectedVehicle 
+                  ? `${selectedVehicle.make} ${selectedVehicle.model} (${selectedVehicle.plateNumber})`
+                  : "Select a vehicle"
+                }
+              </Text>
+              <FontAwesome 
+                name={showVehicleDropdown ? "chevron-up" : "chevron-down"} 
+                size={16} 
+                color="#0051a8" 
+              />
+            </TouchableOpacity>
+
+            {showVehicleDropdown && vehicles.length > 0 && (
+              <View style={styles.dropdown}>
+                <ScrollView style={{ maxHeight: 200 }}>
+                  {vehicles.map(renderVehicleItem)}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+
+          {/* Source */}
+          <View style={{ marginBottom: 15, zIndex: 2000 }}>
             <Text style={styles.label}>Source</Text>
             <View style={inputWithCross}>
               <TextInput
@@ -232,11 +351,10 @@ const CreateRideScreen = () => {
                 ))}
               </ScrollView>
             )}
-
           </View>
 
           {/* Destination */}
-          <View style={{ marginBottom: 15 }}>
+          <View style={{ marginBottom: 15, zIndex: 1000 }}>
             <Text style={styles.label}>Destination</Text>
             <View style={inputWithCross}>
               <TextInput
@@ -345,9 +463,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 12,
-    // backgroundColor: "#fff",
+    backgroundColor: "#fff",
+  },
+  placeholderField: {
+    backgroundColor: "#f8f9fa",
   },
   dateText: { fontSize: 15, color: "#000" },
+  placeholderText: { color: "#999" },
   slotContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -388,4 +510,9 @@ const styles = StyleSheet.create({
   dropdownItem: { padding: 10, borderBottomWidth: 1, borderBottomColor: "#eee" },
   suggestionMain: { fontSize: 14, fontWeight: "600", color: "#333" },
   suggestionSecondary: { fontSize: 12, color: "#666", marginTop: 2 },
+  addVehicleLink: {
+    fontSize: 14,
+    color: "#0051a8",
+    fontWeight: "600",
+  },
 });

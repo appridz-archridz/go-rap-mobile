@@ -1,20 +1,19 @@
-import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  FlatList,
-  StyleSheet,
-  View,
-  TextInput,
-  Text,
-  Pressable,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-  Linking,
-  Alert,
-} from "react-native";
-import { useEffect, useState } from "react";
 import { FontAwesome } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Linking,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { requestRideService } from "../../services/request-ride-service";
 
 const ExploreRequestRide = () => {

@@ -69,6 +69,8 @@ export default function RootLayout() {
                     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                     <Stack.Screen name="UserRidesScreen" options={{ title: "My Rides" }} />
                     <Stack.Screen name="vehicle-information" options={{ headerShown: false }} />
+                    <Stack.Screen name="my-requested-ride" options={{ headerShown: false }} />
+                    <Stack.Screen name="request-ride" options={{ headerShown: false }} />
                     <Stack.Screen name="ride-details" options={{
                       headerShown: true, headerTitle: "Ride Details", headerTitleStyle: {
                         fontSize: 18,
