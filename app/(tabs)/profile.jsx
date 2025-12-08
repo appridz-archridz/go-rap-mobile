@@ -161,6 +161,13 @@ export default function ProfileScreen() {
       icon: "car-outline",
       onPress: () => router.push("/UserRidesScreen"),
     },
+    {
+      id: 2,
+      title: "My Requested Rides",
+      subtitle: "View your Requested rides",
+      icon: "car-outline",
+      onPress: () => router.push("/my-requested-ride"),
+    }
   ];
 
   const displayedProfileUri = localPreviewUri || capturedImage || selector.profilePic || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80";
