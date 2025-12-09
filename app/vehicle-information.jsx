@@ -71,6 +71,16 @@ const VehicleInfoFormScreen = () => {
     setShowPermitExpiryPicker(false);
   };
 
+  const validateVehicle = (vehicleNumber) => {
+    const vehicleRegex = /^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$/;
+    return vehicleRegex.test(vehicleNumber.toUpperCase());
+  }
+
+  const validateDL = (dlNumber) => {
+    const dlRegex = /^[A-Z]{2}\d{2}\d{4}\d{7}$/;
+    return dlRegex.test(dlNumber.toUpperCase());
+  }
+
   const handleSubmit = async () => {
     // Prevent double submission
     if (isSubmitting) return;
@@ -89,6 +99,16 @@ const VehicleInfoFormScreen = () => {
         return;
       }
 
+      if (!validateVehicle(formData.vehicleNumber)) {
+        Alert.alert("Error", "Invalid vehicle number. Please check and try again.");
+        return;
+      }
+
+      if (!validateDL(formData.dlNumber)) {
+        Alert.alert("Error", "Invalid DL number. Please check and try again.");
+        return;
+      }
+
       setIsSubmitting(true);
 
       const payload = {
@@ -99,8 +119,6 @@ const VehicleInfoFormScreen = () => {
       let response = isEdit
         ? await updateVehicle(vehicleId, payload)
         : await createVehicle(userId, payload);
-
-      console.log("response status:", response.status);
 
       if (response.status === 201 || response.status === 200) {
         const successMessage = isEdit
@@ -131,7 +149,7 @@ const VehicleInfoFormScreen = () => {
       Alert.alert(
         "Error",
         error.response?.data?.message ||
-          "Failed to submit vehicle information. Please try again."
+        "Failed to submit vehicle information. Please try again."
       );
     } finally {
       setIsSubmitting(false);
@@ -231,7 +249,7 @@ const VehicleInfoFormScreen = () => {
             <View style={inputWithCross}>
               <RNTextInput
                 style={inputField}
-                placeholder="Enter Vehicle Number (e.g., AP16TS2001)"
+                placeholder="e.g: TS16EN9XXX"
                 value={formData.vehicleNumber}
                 onChangeText={(value) =>
                   handleInputChange("vehicleNumber", value.toUpperCase())
@@ -251,11 +269,11 @@ const VehicleInfoFormScreen = () => {
 
           {/* DL Number */}
           <View style={{ marginBottom: 15 }}>
-            <Text style={styles.label}>DL Number *</Text>
+            <Text style={styles.label}>DL Number (Driving License Number)*</Text>
             <View style={inputWithCross}>
               <RNTextInput
                 style={inputField}
-                placeholder="Enter Driving License Number"
+                placeholder="e.g: TS0920110012345"
                 value={formData.dlNumber}
                 onChangeText={(value) => handleInputChange("dlNumber", value)}
               />
@@ -525,8 +543,8 @@ const VehicleInfoFormScreen = () => {
               {isSubmitting
                 ? "Submitting..."
                 : isEdit
-                ? "Update Vehicle Info"
-                : "Submit Vehicle Info"}
+                  ? "Update Vehicle Info"
+                  : "Submit Vehicle Info"}
             </Text>
           </TouchableOpacity>
 

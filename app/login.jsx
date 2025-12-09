@@ -33,15 +33,15 @@ const Login = () => {
   const Snackbar = useSnackbar();
   const params = useLocalSearchParams();
 
-  // useEffect(() => {
-  //   if (params?.logout) {
-  //     dispatch(logout());
-  //   }
+  useEffect(() => {
+    if (params?.logout) {
+      dispatch(logout());
+    }
 
-  //   if (isAuthenticated && !params?.logout) {
-  //     router.replace("/search-ride");
-  //   }
-  // }, [isAuthenticated]);
+    if (isAuthenticated && !params?.logout) {
+      router.replace("/search-ride");
+    }
+  }, [isAuthenticated]);
 
   const validateField = (field, value) => {
     let message = "";

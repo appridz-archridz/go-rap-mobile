@@ -1,6 +1,7 @@
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from "react-native";
-import { Avatar, Button, Card, Chip, FAB, Paragraph, Text } from "react-native-paper";
+import { Avatar, Card, Chip, FAB, Paragraph, Text } from "react-native-paper";
 import { useSelector } from "react-redux";
 import { getRidesByUser } from '../services/ride-service';
 
@@ -33,6 +34,12 @@ const UserRidesScreen = ({ route }) => {
   const onRefresh = () => {
     setRefreshing(true);
     fetchRides();
+  };
+
+  const createRide = () => {
+    router.push("/create-ride");
+    // console.log('creretride');
+    
   };
 
   const renderRide = ({ item }) => (
@@ -128,7 +135,7 @@ const UserRidesScreen = ({ route }) => {
       <FAB
         icon="plus"
         style={styles.fab}
-        onPress={() => console.log("Add new ride")}
+        onPress={() => createRide()}
       />
     </View>
   );
