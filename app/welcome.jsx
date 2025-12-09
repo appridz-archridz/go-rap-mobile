@@ -44,8 +44,8 @@ const Welcome = () => {
             <View style={styles.content}>
                 <Image style={{ width: 220, height: 120 }} source={require('../assets/images/gorap-logo-bg-white.png')} />
                 <Text style={styles.heading}>
-                    <Text>Go Responsible and Pool</Text>
-                    {/* <Text>Your Journey, Our Wheels.</Text> */}
+                    {/* <Text>Go Responsible and Pool</Text> */}
+                    <Text>Your Journey, Our Wheels.</Text>
                 </Text>
                 <Text style={styles.caption}>
                     <Text>Reliable, Fast, and Affordable Rides at Your Fingertips.</Text>
