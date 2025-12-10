@@ -156,17 +156,24 @@ export default function ProfileScreen() {
   const menuItems = [
     {
       id: 1,
-      title: "My Rides",
+      title: "Rides",
       subtitle: "View your created and joined rides",
       icon: "car-outline",
       onPress: () => router.push("/UserRidesScreen"),
     },
     {
       id: 2,
-      title: "My Requested Rides",
+      title: "Requested Rides",
       subtitle: "View your Requested rides",
-      icon: "car-outline",
+      icon: "hourglass-outline",
       onPress: () => router.push("/my-requested-ride"),
+    },
+    {
+      id: 3,
+      title: "Vehicles",
+      subtitle: "Manage your vehicles",
+      icon: "star-outline",
+      onPress: () => router.push("/user-vehicles"),
     }
   ];
 

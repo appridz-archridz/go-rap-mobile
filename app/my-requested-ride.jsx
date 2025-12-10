@@ -1,19 +1,19 @@
-import { SafeAreaView } from "react-native-safe-area-context";
+import { FontAwesome } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
+  RefreshControl,
   StyleSheet,
-  View,
   Text,
   TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
+  View,
 } from "react-native";
-import { useEffect, useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
-import { FontAwesome } from "@expo/vector-icons";
 import { requestRideService } from "../services/request-ride-service";
-import { router } from "expo-router";
 
 const MyRequestRides = () => {
   const selector = useSelector((state) => state.auth);
@@ -148,7 +148,7 @@ const MyRequestRides = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Rides</Text>
+        <Text style={styles.headerTitle}>My Requested Rides</Text>
         <Text style={styles.headerSubtitle}>Manage your ride requests</Text>
       </View>
 
