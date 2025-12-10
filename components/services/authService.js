@@ -37,9 +37,14 @@ export const updateRefreshToken = (refreshToken) => {
   return api.post(`${AUTH_BASE_URL}/refresh-token`, { refreshToken: refreshToken });
 };
 
+const isEmailExists = (email) => {
+  return api.get(`${AUTH_BASE_URL}/is-email-exists?email=${email}`);
+};
+
 export const AuthService = {
   login,
   signUp,
   getProfileInfo,
   updateProfile,
+  isEmailExists
 };

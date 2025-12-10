@@ -1,53 +1,62 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-  ActivityIndicator,
+  View
 } from "react-native";
+import { AuthService, forgotPassword } from '../components/services/authService'; // Import your API function
 import { inputField } from "../global-css";
-import { forgotPassword } from '../components/services/authService';// Import your API function
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const validateEmail = (value) => {
-    if (!value) return "Email is required";
-    if (!/\S+@\S+\.\S+/.test(value)) return "Enter a valid email address";
-    return "";
+  const isEmailExists = async (email) => {
+    try {
+      const { data } = await AuthService.isEmailExists(email);
+      return { success: data?.success, message: data?.message };
+    } catch (err) {
+      return false;
+    }
   };
 
   const handleSendOtp = async () => {
-    const validationError = validateEmail(email);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    setError("");
-    setLoading(true);
-
     try {
-    
-      await forgotPassword(email);
-      // Navigate to OTP verification page with email
-      router.push({
-        pathname: "/verify-otp",
-        params: { email },
-      });
+      const { data } = await AuthService.isEmailExists(email);
+      if (!data?.success) {
+        Alert.alert("User Not Found", "Email that you entered is not found. Please try again.");
+        return;
+      }
+
+      setError("");
+      setLoading(true);
+
+      try {
+
+        await forgotPassword(email);
+        // Navigate to OTP verification page with email
+        router.push({
+          pathname: "/verify-otp",
+          params: { email },
+        });
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+          "Failed to send OTP. Please try again."
+        );
+      } finally {
+        setLoading(false);
+      }
     } catch (err) {
-      setError(
-        err.response?.data?.message || 
-        "Failed to send OTP. Please try again."
-      );
-    } finally {
-      setLoading(false);
+      Alert.alert("User Not Found", "Email that you entered is not found. Please try again.");
+      return;
     }
   };
 
@@ -78,7 +87,6 @@ export default function ForgotPassword() {
             value={email}
             onChangeText={(text) => {
               setEmail(text);
-              if (error) setError(validateEmail(text));
             }}
             keyboardType="email-address"
             autoCapitalize="none"
