@@ -1,7 +1,7 @@
 import { Routes } from '@/components/RoutesModal';
 import { FontAwesome } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -20,7 +20,7 @@ import {
 import { useSelector } from "react-redux";
 import { clearButton, inputField, inputWithCross } from "../../global-css";
 import { olaService } from "../../services/thirdPartyApis";
-import { RideService } from './../../services/ride-service';
+import { getRideById, RideService } from './../../services/ride-service';
 import { getUserVehicles } from './../../services/vehicle-service';
 
 const CreateRideScreen = () => {
@@ -42,7 +42,8 @@ const CreateRideScreen = () => {
   const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
   const [isCreatingRide, setIsCreatingRide] = useState(false);
   const [path, setPath] = useState('');
-  
+  const [pageTitle, setPageTitle] = useState('Create Ride');
+
   // Vehicle related states
   const [vehicles, setVehicles] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
@@ -54,28 +55,111 @@ const CreateRideScreen = () => {
 
   const selector = useSelector((state) => state.auth);
 
+  const [rideId, setRideId] = useState(useLocalSearchParams()?.rideId || null);
+
   // Fetch user vehicles on component mount
   useEffect(() => {
     fetchUserVehicles();
   }, []);
 
+  useEffect(() => {
+    if (rideId) {
+      setPageTitle('Update Ride');
+      fetchRideDetails();
+    }
+  }, [rideId]);
+
+  const fetchRideDetails = async () => {
+    try {
+      const res = await getRideById(rideId);
+      const ride = res.data?.data;
+
+      if (!ride) return;
+
+      console.log("Ride details:", ride);
+
+      // -------------------  Set basic fields  --------------------
+      setSource(ride.startPoint || "");
+      setDestination(ride.destinationPoint || "");
+
+      setSelectedSource({
+        description: ride.startPoint,
+        geometry: { location: { lat: ride.startLatitude, lng: ride.startLongitude } }
+      });
+
+      setSelectedDestination({
+        description: ride.destinationPoint,
+        geometry: { location: { lat: ride.destinationLatitude, lng: ride.destinationLongitude } }
+      });
+
+      // -------------------  Set Date  --------------------
+      const d = new Date(ride.rideDate);
+      if (!isNaN(d)) setRideDate(d);
+
+      // -------------------  Set Time  --------------------
+      const [hr, min, sec] = ride.rideTime.split(":").map(n => parseInt(n));
+      const t = new Date();
+      t.setHours(hr, min, sec || 0);
+      setRideTime(new Date(t));
+
+      // -------------------  Seats (default fallback)  --------------------
+      setSlots(ride.availableSeats || 1);
+
+      // -------------------  Vehicle preload  --------------------
+      const matchedVehicle = vehicles.find(v => v.id === ride.vehicleId);
+
+      if (matchedVehicle) {
+        setSelectedVehicle(matchedVehicle);
+      } else {
+        // vehicle not in list → still display placeholder
+        setSelectedVehicle({
+          id: ride.vehicleId,
+          vehicleType: ride.vehicleType,
+          vehicleNumber: ride.vehicleNumber
+        });
+      }
+
+      // -------------------  Pre-fill route polyline if available  --------------------
+      if (ride.polyline) {
+        setSelectedRoute(ride.polyline);
+        setPath(ride.polyline);
+      }
+
+      // Set page title
+      setPageTitle("Update Ride");
+
+    } catch (error) {
+      console.error("Error fetching ride details:", error);
+    }
+  };
+
   const fetchUserVehicles = async () => {
     try {
       setLoadingVehicles(true);
       const { data } = await getUserVehicles(selector.userId);
-      
+
       if (data.data.length > 0) {
         setVehicles(data.data);
-        setSelectedVehicle(data.data[0]);
+
+        if (selectedVehicle && selectedVehicle.id) {
+          const matched = data.data.find(v => String(v.id) === String(selectedVehicle.id));
+          if (matched) {
+            setSelectedVehicle(matched);
+          } else {
+            setSelectedVehicle(data.data[0]);
+          }
+        } else {
+          setSelectedVehicle(data.data[0]);
+        }
       } else {
         Alert.alert(
           "No Vehicle Found",
           "You need to add at least one vehicle to create a ride. Would you like to add a vehicle now?",
           [
             { text: "Cancel", style: "cancel" },
-            { 
-              text: "Add Vehicle", 
-              onPress: () => router.push("/vehicle-information") 
+            {
+              text: "Add Vehicle",
+              onPress: () => router.push("/vehicle-information")
             }
           ]
         );
@@ -87,9 +171,9 @@ const CreateRideScreen = () => {
         "Failed to fetch your vehicles. Please try again or add a vehicle.",
         [
           { text: "Cancel", style: "cancel" },
-          { 
-            text: "Add Vehicle", 
-            onPress: () => router.push("/vehicle-information") 
+          {
+            text: "Add Vehicle",
+            onPress: () => router.push("/vehicle-information")
           }
         ]
       );
@@ -145,10 +229,11 @@ const CreateRideScreen = () => {
       Alert.alert("Error", "Please select both source and destination");
       return;
     }
-    
+
     try {
-      const from = selectedSource.geometry.location;
-      const to = selectedDestination.geometry.location;
+      console.log("from, to", selectedSource);
+      const from = selectedSource.geometry.location || selectedSource;
+      const to = selectedDestination.geometry.location || selectedDestination;
       const res = await olaService.getRoute(from, to);
       setRoutes(res || []);
       Routes.show({
@@ -173,27 +258,30 @@ const CreateRideScreen = () => {
     }
   }, [selectedRoute]);
 
+  const createPayload = () => {
+    const payload = {
+      startPoint: selectedSource.description,
+      startLatitude: selectedSource.geometry.location.lat,
+      startLongitude: selectedSource.geometry.location.lng,
+
+      destinationPoint: selectedDestination.description,
+      destinationLatitude: selectedDestination.geometry.location.lat,
+      destinationLongitude: selectedDestination.geometry.location.lng,
+
+      rideDate: rideDate.toISOString().split("T")[0],
+      rideTime: rideTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }),
+
+      availableSeats: slots || 1,
+      polyline: selectedRoute,
+      vehicleId: selectedVehicle.id,
+      vehicleType: selectedVehicle.vehicleType || "Car", // Fallback to "Car" if vehicleType not available
+    };
+    return payload;
+  }
+
   const createRide = async () => {
     try {
-      console.log("vechicle ",selectedVehicle)
-      const payload = {
-        startPoint: selectedSource.description,
-        startLatitude: selectedSource.geometry.location.lat,
-        startLongitude: selectedSource.geometry.location.lng,
-
-        destinationPoint: selectedDestination.description,
-        destinationLatitude: selectedDestination.geometry.location.lat,
-        destinationLongitude: selectedDestination.geometry.location.lng,
-
-        rideDate: rideDate.toISOString().split("T")[0],
-        rideTime: rideTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }),
-
-        availableSeats: slots || 1,
-        polyline: selectedRoute,
-        vehicleId: selectedVehicle.id,
-        vehicleType: selectedVehicle.vehicleType || "Car", // Fallback to "Car" if vehicleType not available
-      };
-
+      const payload = createPayload();
       const { data } = await RideService.createRide(selector.userId, payload);
 
       reset();
@@ -205,28 +293,36 @@ const CreateRideScreen = () => {
       else Alert.alert("Error", data.message || "Something went wrong");
     } catch (error) {
       console.error("Error creating ride:", error);
-      Alert.alert("Error", "Failed to create ride");
+      Alert.alert("Error", "Failed to  { pageTitle } ");
     } finally {
       setLoading(false);
     }
   };
 
-  const reset = () => {
-    setSource("");
-    setDestination("");
-    setSelectedSource(null);
-    setSelectedDestination(null);
-    setRoutes([]);
-    setSelectedRoute(null);
-    setRideDate(new Date());
-    setRideTime(new Date());
-    setSlots(1);
-    // Don't reset selectedVehicle - keep the last selected vehicle
-  };
+  const updateRide = async () => {
+    try {
+      const payload = createPayload();
+      const { data } = await RideService.updateRide(rideId, payload);
+
+      reset();
+
+      if (data.success) {
+        Alert.alert("Success", "Ride Updated successfully!");
+        router.push("/search-ride");
+      }
+      else Alert.alert("Error", data.message || "Something went wrong");
+    } catch (error) {
+      console.error("Error creating ride:", error);
+      Alert.alert("Error", "Failed to  { pageTitle } ");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (selectedRoute && isCreatingRide && selectedSource && selectedDestination) {
-      createRide();
+      if (rideId) updateRide();
+      else createRide();
     }
   }, [isCreatingRide, selectedRoute]);
 
@@ -294,7 +390,7 @@ const CreateRideScreen = () => {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>Create Ride</Text>
+          <Text style={styles.title}> {pageTitle} </Text>
 
           {/* Vehicle Selection */}
           <View style={{ marginBottom: 15, zIndex: 3000 }}>
@@ -304,21 +400,21 @@ const CreateRideScreen = () => {
                 <Text style={styles.addVehicleLink}>+ Add Vehicle</Text>
               </TouchableOpacity>
             </View>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.dateField, !selectedVehicle && styles.placeholderField]}
               onPress={() => setShowVehicleDropdown(!showVehicleDropdown)}
             >
               <Text style={[styles.dateText, !selectedVehicle && styles.placeholderText]}>
-                {selectedVehicle 
+                {selectedVehicle
                   ? `${selectedVehicle.vehicleType || "Vehicle"} - ${selectedVehicle.vehicleNumber}`
                   : "Select a vehicle"
                 }
               </Text>
-              <FontAwesome 
-                name={showVehicleDropdown ? "chevron-up" : "chevron-down"} 
-                size={16} 
-                color="#0051a8" 
+              <FontAwesome
+                name={showVehicleDropdown ? "chevron-up" : "chevron-down"}
+                size={16}
+                color="#0051a8"
               />
             </TouchableOpacity>
 
@@ -419,9 +515,9 @@ const CreateRideScreen = () => {
             </View>
           </View>
 
-          {/* Create Ride */}
+          {/*  { pageTitle }  */}
           <TouchableOpacity style={styles.submitBtn} onPress={fetchRoutes} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Create Ride</Text>}
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}> {pageTitle} </Text>}
           </TouchableOpacity>
 
           {/* Date/Time Pickers */}
