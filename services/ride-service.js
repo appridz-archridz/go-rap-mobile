@@ -8,8 +8,12 @@ export const RideService = {
     console.log('crea ride service call - ', userId, rideDTO);
     return api.post(`${RIDE_BASE_URL}/create/${userId}`, rideDTO);
   },
-};
 
+  updateRide: (rideId, rideDTO) => {
+    return api.put(`${RIDE_BASE_URL}/update/${rideId}`, rideDTO);
+  },
+
+};
 
 export const getRides = async (searchDTO) => {
  return api.post(`${RIDE_BASE_URL}/search`, searchDTO);

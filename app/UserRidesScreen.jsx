@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from "react-native";
-import { Avatar, Card, Chip, FAB, Paragraph, Text } from "react-native-paper";
+import { Avatar, Card, Chip, FAB, IconButton, Paragraph, Text } from "react-native-paper";
 import { useSelector } from "react-redux";
 import { getRidesByUser } from '../services/ride-service';
 
@@ -22,9 +22,11 @@ const UserRidesScreen = ({ route }) => {
       setRefreshing(false);
     }
   };
-  const handleEditRide= (rideId) => {
-    // Navigate to the edit ride screen with the selected rideId
-    router.push(`/create-ride/${rideId}`);
+  const handleEditRide = (rideId) => {
+    router.push({
+      pathname: "/create-ride",
+      params: { rideId: rideId },
+    });
   };
 
   useEffect(() => {
@@ -36,10 +38,11 @@ const UserRidesScreen = ({ route }) => {
     fetchRides();
   };
 
+  const handleDeleteRide = async (rideId) => {
+  };
+
   const createRide = () => {
     router.push("/create-ride");
-    // console.log('creretride');
-    
   };
 
   const renderRide = ({ item }) => (
@@ -47,11 +50,16 @@ const UserRidesScreen = ({ route }) => {
       <Card.Title
         title="Ride Details"
         titleStyle={styles.cardTitle}
-        left={(props) => <Avatar.Icon {...props} icon="car" style={styles.avatarIcon} />}
+        left={(props) => (
+          <Avatar.Icon {...props} icon="car" style={styles.avatarIcon} />
+        )}
         right={(props) => (
           <Chip
             mode="outlined"
-            style={[styles.statusChip, { backgroundColor: getStatusColor(item.status) }]}
+            style={[
+              styles.statusChip,
+              { backgroundColor: getStatusColor(item.status) },
+            ]}
             textStyle={styles.chipText}
           >
             {item.status}
@@ -62,37 +70,48 @@ const UserRidesScreen = ({ route }) => {
       <Card.Content style={styles.cardContent}>
         <View style={styles.detailRow}>
           <Avatar.Icon size={24} icon="map-marker" style={styles.detailIcon} />
-          <Paragraph style={styles.detailText}>From: {item.source.split(",").slice(0, 2).join(",").trim()}</Paragraph>
+          <Paragraph style={styles.detailText}>
+            From: {item.source.split(",").slice(0, 2).join(",").trim()}
+          </Paragraph>
         </View>
+
         <View style={styles.detailRow}>
           <Avatar.Icon size={24} icon="map-marker-check" style={styles.detailIcon} />
-          <Paragraph style={styles.detailText}>To: {item.destination.split(",").slice(0, 2).join(",").trim()}</Paragraph>
+          <Paragraph style={styles.detailText}>
+            To: {item.destination.split(",").slice(0, 2).join(",").trim()}
+          </Paragraph>
         </View>
+
         <View style={styles.detailRow}>
           <Avatar.Icon size={24} icon="calendar-month-outline" style={styles.detailIcon} />
           <Paragraph style={styles.detailText}>
             Ride Date: {new Date(item.createdDate).toLocaleDateString()}
           </Paragraph>
         </View>
+
         <View style={styles.detailRow}>
           <Avatar.Icon size={24} icon="clock-time-four-outline" style={styles.detailIcon} />
-          <Paragraph style={styles.detailText}>
-            Ride Time: {item.rideTime}
-          </Paragraph>
+          <Paragraph style={styles.detailText}>Ride Time: {item.rideTime}</Paragraph>
         </View>
       </Card.Content>
 
-      {/* <Card.Actions style={styles.cardActions}>
-        <Button
-          mode="contained"
-          onPress={handleEditRide}
-          style={styles.editButton}
-          labelStyle={styles.buttonLabel}
-        >
-          Edit Ride
-        </Button>
-      </Card.Actions> */}
+      {/* Bottom Icon Actions */}
+      <Card.Actions style={styles.bottomActions}>
+        <IconButton
+          icon="pencil"
+          size={24}
+          onPress={() => handleEditRide(item.id)}
+          style={styles.actionIcon}
+        />
+        <IconButton
+          icon="delete"
+          size={24}
+          onPress={handleDeleteRide}
+          style={styles.actionIcon}
+        />
+      </Card.Actions>
     </Card>
+
   );
 
   const getStatusColor = (status) => {
@@ -255,4 +274,15 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: '#0051a8',
   },
+  bottomActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+  },
+
+  actionIcon: {
+    marginHorizontal: 4,
+  },
+
 });
