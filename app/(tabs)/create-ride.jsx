@@ -231,7 +231,6 @@ const CreateRideScreen = () => {
     }
 
     try {
-      console.log("from, to", selectedSource);
       const from = selectedSource.geometry.location || selectedSource;
       const to = selectedDestination.geometry.location || selectedDestination;
       const res = await olaService.getRoute(from, to);
@@ -283,10 +282,10 @@ const CreateRideScreen = () => {
     try {
       const payload = createPayload();
       const { data } = await RideService.createRide(selector.userId, payload);
+      
 
-      reset();
-
-      if (data.success) {
+      
+      if (data.statusCode == 201) {
         Alert.alert("Success", "Ride created successfully!");
         router.push("/search-ride");
       }
@@ -304,9 +303,9 @@ const CreateRideScreen = () => {
       const payload = createPayload();
       const { data } = await RideService.updateRide(rideId, payload);
 
-      reset();
-
-      if (data.success) {
+     // reset();
+     console.log("response",data)
+      if (data.statusCode == 200) {
         Alert.alert("Success", "Ride Updated successfully!");
         router.push("/search-ride");
       }

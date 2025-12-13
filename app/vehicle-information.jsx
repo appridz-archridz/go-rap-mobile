@@ -104,10 +104,10 @@ const VehicleInfoFormScreen = () => {
         return;
       }
 
-      if (!validateDL(formData.dlNumber)) {
-        Alert.alert("Error", "Invalid DL number. Please check and try again.");
-        return;
-      }
+      // if (!validateDL(formData.dlNumber)) {
+      //   Alert.alert("Error", "Invalid DL number. Please check and try again.");
+      //   return;
+      // }
 
       setIsSubmitting(true);
 
