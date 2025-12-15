@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { useSelector } from 'react-redux';
-import { getUserVehicles } from '../services/vehicle-service';
+import { deleteVehicle, getUserVehicles } from '../services/vehicle-service';
 
 export default function ManageVehiclesScreen({ navigation, route }) {
   const selector = useSelector((state) => state.auth);
@@ -16,11 +16,8 @@ export default function ManageVehiclesScreen({ navigation, route }) {
     try {
       const { data } = await getUserVehicles(selector.userId);
       const list = data?.data || [];
-      console.log("list :",list)
       setVehicles(list);
-      console.log("vehicles",vehicles)
     } catch (e) {
-      console.error(e);
     } finally {
       setLoading(false);
       fadeIn();
@@ -45,15 +42,39 @@ export default function ManageVehiclesScreen({ navigation, route }) {
     }).start();
   };
 
+
   const handleDeleteVehicle = (vehicleId) => {
-    // Add your delete logic here
-    console.log('Delete vehicle:', vehicleId);
-    // You might want to show a confirmation dialog before deleting
+    Alert.alert(
+      "Delete Vehicle",
+      "Are you sure you want to delete this vehicle?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Yes",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteVehicle(vehicleId);
+              setVehicles((prev) =>
+                prev.filter((v) => v.id !== vehicleId)
+              );
+            } catch (error) {
+            }
+          },
+        },
+      ]
+    );
   };
 
-  useEffect(() => {
-    fetchVehicles();
-  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchVehicles();
+    }, [])
+  );
 
   const getVehicleIcon = (type) => {
     const icons = {
@@ -91,7 +112,9 @@ export default function ManageVehiclesScreen({ navigation, route }) {
       {/* Header - Compact Single Line */}
       <View
         style={{
-          backgroundColor: '#1e3a8a',
+          backgroundColor: '#fff',
+          borderBottomWidth: 1,
+          borderBottomColor: '#e5e7eb',
           paddingVertical: 14,
           paddingHorizontal: 20,
           flexDirection: 'row',
@@ -106,19 +129,19 @@ export default function ManageVehiclesScreen({ navigation, route }) {
             width: 40,
             height: 40,
             borderRadius: 20,
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            backgroundColor: 'rgba(100, 224, 236, 0.34)',
             justifyContent: 'center',
             alignItems: 'center',
             marginRight: 12,
           }}>
-            <Ionicons name={getVehicleIcon(item.vehicleType)} size={22} color="#ffffff" />
+            <Ionicons name={getVehicleIcon(item.vehicleType)} size={22} color="#080808ff" />
           </View>
           
           {/* Vehicle Type */}
           <Text style={{ 
             fontSize: 18, 
             fontWeight: '700', 
-            color: '#ffffff',
+            color: '#000',
           }}>
             {item.vehicleType}
           </Text>
@@ -126,7 +149,7 @@ export default function ManageVehiclesScreen({ navigation, route }) {
         
         {/* Right Side: Vehicle Number */}
         <View style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.25)',
+          backgroundColor: 'rgba(252, 211, 6, 0.9)',
           paddingHorizontal: 12,
           paddingVertical: 6,
           borderRadius: 10,
@@ -134,7 +157,7 @@ export default function ManageVehiclesScreen({ navigation, route }) {
           <Text style={{ 
             fontSize: 13, 
             fontWeight: '600', 
-            color: '#ffffff',
+            color: '#000',
             letterSpacing: 0.5,
           }}>
             {item.vehicleNumber}
@@ -204,7 +227,10 @@ export default function ManageVehiclesScreen({ navigation, route }) {
         <View style={{ flexDirection: 'row', gap: 12 }}>
           {/* Edit Button */}
           <TouchableOpacity
-            onPress={() => navigation.navigate('EditVehicle', { vehicleId: item.id })}
+            onPress={() => router.push({
+            pathname: 'vehicle-information',
+            params: { vehicleId: item.id },
+            })}
             activeOpacity={0.8}
             style={{
               flex: 1,
@@ -223,7 +249,7 @@ export default function ManageVehiclesScreen({ navigation, route }) {
           >
             <Ionicons name="pencil" size={18} color="#ffffff" />
             <Text style={{ fontSize: 16, color: '#ffffff', fontWeight: '700', marginLeft: 6 }}>
-              Edit
+             View / Edit
             </Text>
           </TouchableOpacity>
 

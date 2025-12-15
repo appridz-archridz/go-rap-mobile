@@ -304,10 +304,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
   header: {
     padding: 20,
-    paddingTop: 10,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
+    alignItems:"center",
   },
   headerTitle: {
     fontSize: 28,

@@ -57,7 +57,6 @@ const VehicleInfoFormScreen = () => {
   const userId = useSelector((state) => state.auth.userId);
 
   const handleInputChange = (field, value) => {
-    console.log("handleInputChange", field, value);
     setFormData({ ...formData, [field]: value });
   };
 
@@ -104,10 +103,10 @@ const VehicleInfoFormScreen = () => {
         return;
       }
 
-      if (!validateDL(formData.dlNumber)) {
-        Alert.alert("Error", "Invalid DL number. Please check and try again.");
-        return;
-      }
+      // if (!validateDL(formData.dlNumber)) {
+      //   Alert.alert("Error", "Invalid DL number. Please check and try again.");
+      //   return;
+      // }
 
       setIsSubmitting(true);
 
@@ -158,45 +157,57 @@ const VehicleInfoFormScreen = () => {
 
   useEffect(() => {
     const loadVehicle = async () => {
+      console.log("inside vehicle");
       try {
         const { data } = await getVehicleById(vehicleId);
 
-        if (data.success && data.vehicle) {
+        console.log("vehicle data:", data);
+
+        if (data.success && data.data) {
+          const vehicle = data.data;
+
           const hasAdditionalInfo = !!(
-            data.vehicle.insurancePolicyNumber ||
-            data.vehicle.pucNumber ||
-            data.vehicle.permitNumber ||
-            data.vehicle.idProofNumber ||
-            data.vehicle.vehicleFrontPhotoUrl
+            vehicle.insurancePolicyNumber ||
+            vehicle.pucNumber ||
+            vehicle.permitNumber ||
+            vehicle.idProofNumber ||
+            vehicle.vehicleFrontPhotoUrl
           );
 
           setShowAdditionalInfo(hasAdditionalInfo);
 
           setFormData({
-            vehicleType: data.vehicle.vehicleType || "Car",
-            vehicleNumber: data.vehicle.vehicleNumber || "",
-            dlNumber: data.vehicle.dlNumber || "",
-            dlExpiry: data.vehicle.dlExpiry
-              ? new Date(data.vehicle.dlExpiry)
+            vehicleType: vehicle.vehicleType || "Car",
+            vehicleNumber: vehicle.vehicleNumber || "",
+            dlNumber: vehicle.dlNumber || "",
+            dlExpiry: vehicle.dlExpiry
+              ? new Date(vehicle.dlExpiry)
               : new Date(),
-            insurancePolicyNumber: data.vehicle.insurancePolicyNumber || "",
-            insuranceExpiry: data.vehicle.insuranceExpiry
-              ? new Date(data.vehicle.insuranceExpiry)
+
+            insurancePolicyNumber: vehicle.insurancePolicyNumber || "",
+            insuranceExpiry: vehicle.insuranceExpiry
+              ? new Date(vehicle.insuranceExpiry)
               : new Date(),
-            isCommercialInsurance: data.vehicle.isCommercialInsurance || false,
-            pucNumber: data.vehicle.pucNumber || "",
-            pucExpiry: data.vehicle.pucExpiry
-              ? new Date(data.vehicle.pucExpiry)
+
+            isCommercialInsurance: vehicle.isCommercialInsurance || false,
+
+            pucNumber: vehicle.pucNumber || "",
+            pucExpiry: vehicle.pucExpiry
+              ? new Date(vehicle.pucExpiry)
               : new Date(),
-            permitNumber: data.vehicle.permitNumber || "",
-            permitExpiry: data.vehicle.permitExpiry
-              ? new Date(data.vehicle.permitExpiry)
+
+            permitNumber: vehicle.permitNumber || "",
+            permitExpiry: vehicle.permitExpiry
+              ? new Date(vehicle.permitExpiry)
               : new Date(),
-            idProofNumber: data.vehicle.idProofNumber || "",
-            vehicleFrontPhoto: data.vehicle.vehicleFrontPhotoUrl
-              ? { uri: data.vehicle.vehicleFrontPhotoUrl }
+
+            idProofNumber: vehicle.idProofNumber || "",
+
+            vehicleFrontPhoto: vehicle.vehicleFrontPhotoUrl
+              ? { uri: vehicle.vehicleFrontPhotoUrl }
               : null,
-            consentGiven: data.vehicle.consentGiven || false,
+
+            consentGiven: vehicle.consentGiven || false,
           });
         }
       } catch (error) {
@@ -209,6 +220,7 @@ const VehicleInfoFormScreen = () => {
       loadVehicle();
     }
   }, [isEdit, vehicleId]);
+
 
   return (
     <KeyboardAvoidingView
