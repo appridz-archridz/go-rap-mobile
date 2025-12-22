@@ -125,6 +125,7 @@ export default function SearchRideScreen() {
             <TextInput
               style={inputField}
               placeholder="Enter starting location"
+              placeholderTextColor={'#999'}
               value={fromQuery}
               onChangeText={handleFromChange}
             />
@@ -161,7 +162,8 @@ export default function SearchRideScreen() {
           <View style={inputWithCross}>
             <TextInput
               style={inputField}
-              placeholder="Enter destination"
+              placeholder="Enter Ending Location"
+              placeholderTextColor={'#999'}
               value={toQuery}
               onChangeText={handleToChange}
             />

@@ -293,11 +293,32 @@ const CreateRideScreen = () => {
       else Alert.alert("Error", data.message || "Something went wrong");
     } catch (error) {
       console.error("Error creating ride:", error);
-      Alert.alert("Error", "Failed to  { pageTitle } ");
+      Alert.alert("Error", "Failed to { pageTitle } ");
     } finally {
       setLoading(false);
     }
   };
+
+  const reset = () => {
+    setSource("");
+    setDestination("");
+    setSelectedSource(null);
+    setSelectedDestination(null);
+    setSelectedRoute(null);
+    setPath([]);
+    setRideDate(new Date());
+    setRideTime(new Date());
+    setSlots(1);
+    setShowSourceSuggestions(false);
+    setShowDestinationSuggestions(false);
+    setRoutes([]);
+    setIsCreatingRide(false);
+    setSelectedVehicle(null);
+    setShowVehicleDropdown(false);
+    setVehicles([]);
+    setLoadingVehicles(true);
+
+  }
 
   const updateRide = async () => {
     try {
@@ -431,7 +452,7 @@ const CreateRideScreen = () => {
           <View style={{ marginBottom: 15, zIndex: 2000 }}>
             <Text style={styles.label}>Source</Text>
             <View style={inputWithCross}>
-              <TextInput
+              <TextInput placeholderTextColor={'#999'}
                 style={inputField}
                 placeholder="Enter Source"
                 value={source}
@@ -458,7 +479,7 @@ const CreateRideScreen = () => {
           <View style={{ marginBottom: 15, zIndex: 1000 }}>
             <Text style={styles.label}>Destination</Text>
             <View style={inputWithCross}>
-              <TextInput
+              <TextInput placeholderTextColor={'#999'}
                 style={inputField}
                 placeholder="Enter Destination"
                 value={destination}
