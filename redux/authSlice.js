@@ -10,6 +10,7 @@ const initialState = {
   email: null,
   phone: null,
   profilePic: null,
+  refreshToken: null
 };
 
 const authSlice = createSlice({
@@ -64,5 +65,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { login, logout, update } = authSlice.actions;
+export const { login, logout, update, updateToken } = authSlice.actions;
 export default authSlice.reducer;
