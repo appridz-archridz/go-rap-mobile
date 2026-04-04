@@ -5,21 +5,132 @@ import {
   WorkSans_700Bold,
 } from "@expo-google-fonts/work-sans";
 import { useFonts } from "expo-font";
-import { router, Stack } from "expo-router";
+import { router, Stack, usePathname, useRootNavigationState, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-// import { NativeBaseProvider } from 'native-base';
-import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { Provider as PaperProvider } from 'react-native-paper';
+import { useEffect, useMemo, useRef } from "react";
+import { ActivityIndicator, View } from "react-native";
+import { Provider as PaperProvider } from "react-native-paper";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { Provider } from "react-redux";
+import { Provider, useSelector } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 import { SnackbarProvider } from "../components/ui/SnackbarProvider";
+import { LoaderProvider } from "../components/ui/Loader";
+import { RoutesModal } from "../components/RoutesModal";
 import { persistor, store } from "../redux/store";
-import { RoutesModal } from './../components/RoutesModal';
-import { LoaderProvider } from './../components/ui/Loader';
+
+const PUBLIC_ROUTES = new Set([
+  "welcome",
+  "login",
+  "signup",
+  "signup-2",
+  "forgot-password",
+  "reset-password",
+  "verify-otp",
+  "TermsAndConditions",
+  "PrivacyPolicy",
+]);
+
+function AppNavigator() {
+  const { isAuthenticated } = useSelector((state) => state.auth);
+  const segments = useSegments();
+  const pathname = usePathname();
+  const navigationState = useRootNavigationState();
+  const lastRedirectRef = useRef(null);
+
+  useEffect(() => {
+    if (!navigationState?.key) return;
+
+    const firstSegment = segments[0];
+    const isInTabs = firstSegment === "(tabs)";
+    const isPublicRoute = !firstSegment || PUBLIC_ROUTES.has(firstSegment);
+
+    let nextRoute = null;
+
+    if (!isAuthenticated && (isInTabs || !isPublicRoute)) {
+      nextRoute = "/login";
+    } else if (isAuthenticated && (firstSegment === "login" || firstSegment === "welcome" || pathname === "/")) {
+      nextRoute = "/search-ride";
+    }
+
+    if (!nextRoute) {
+      lastRedirectRef.current = null;
+      return;
+    }
+
+    if (pathname === nextRoute || lastRedirectRef.current === nextRoute) {
+      return;
+    }
+
+    lastRedirectRef.current = nextRoute;
+    router.replace(nextRoute);
+  }, [isAuthenticated, navigationState?.key, pathname, segments]);
+
+  const defaultScreenOptions = useMemo(
+    () => ({
+      headerShown: false,
+      headerTitleAlign: "center",
+    }),
+    []
+  );
+
+  const rideDetailsOptions = useMemo(
+    () => ({
+      headerShown: true,
+      headerTitle: "Ride Details",
+      headerTitleStyle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#003366",
+      },
+    }),
+    []
+  );
+
+  const rideResultsOptions = useMemo(
+    () => ({
+      headerShown: true,
+      headerTitle: "Available Rides",
+      headerStyle: {
+        backgroundColor: "#fff",
+      },
+      headerTitleStyle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#003366",
+      },
+    }),
+    []
+  );
+
+  return (
+    <>
+      <StatusBar style="dark" translucent={false} />
+      <Stack screenOptions={defaultScreenOptions}>
+        <Stack.Screen name="welcome" />
+        <Stack.Screen name="signup" />
+        <Stack.Screen name="signup-2" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="TermsAndConditions" />
+        <Stack.Screen name="PrivacyPolicy" />
+        <Stack.Screen name="forgot-password" />
+        <Stack.Screen name="reset-password" />
+        <Stack.Screen name="verify-otp" />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="UserRidesScreen" options={{ headerShown: false }} />
+        <Stack.Screen name="vehicle-information" options={{ headerShown: false }} />
+        <Stack.Screen name="my-requested-ride" options={{ headerShown: false }} />
+        <Stack.Screen name="request-ride" options={{ headerShown: false }} />
+        <Stack.Screen name="user-vehicles" options={{ headerShown: false }} />
+        <Stack.Screen name="ride-details" options={rideDetailsOptions} />
+        <Stack.Screen name="ride-results" options={rideResultsOptions} />
+      </Stack>
+      <RoutesModal />
+    </>
+  );
+}
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  useColorScheme();
 
   const [fontsLoaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
@@ -36,16 +147,6 @@ export default function RootLayout() {
     );
   }
 
-  const navigateTo = () => {
-    router.push('/profile');
-  }
-
-  const screenOptions = (title: string) => ({
-    headerShown: false,
-    headerTitle: title,
-    headerTitleAlign: 'center',
-  });
-
   return (
     <PaperProvider>
       <SafeAreaProvider>
@@ -54,49 +155,7 @@ export default function RootLayout() {
             <SnackbarProvider>
               <Provider store={store}>
                 <PersistGate loading={null} persistor={persistor}>
-                  {/* <ThemeProvider> */}
-                  <StatusBar style="dark" translucent={false} />
-
-                  <Stack screenOptions={{ headerShown: true, headerTitleAlign: "center" }}>
-                    <Stack.Screen name="welcome" options={screenOptions("Welcome")} />
-                    <Stack.Screen name="signup" options={screenOptions("Sign Up")} />
-                    <Stack.Screen name="signup-2" options={screenOptions("Sign Up")} />
-                    <Stack.Screen name="login" options={screenOptions("Login")} />
-                    <Stack.Screen name="TermsAndConditions" options={screenOptions("Terms & Conditions")} />
-                    <Stack.Screen name="PrivacyPolicy" options={screenOptions("Privacy Policy")} />
-                    <Stack.Screen name="forgot-password" options={screenOptions("Forgot Password")} />
-                    <Stack.Screen name="reset-password" options={screenOptions("Reset Password")} />
-                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                    <Stack.Screen name="UserRidesScreen" options={{ headerShown: false }} />
-                    <Stack.Screen name="vehicle-information" options={{ headerShown: false }} />
-                    <Stack.Screen name="my-requested-ride" options={{ headerShown: false }} />
-                    <Stack.Screen name="request-ride" options={{ headerShown: false }} />
-                    <Stack.Screen name="user-vehicles" options={{ headerShown: false }} />
-                    <Stack.Screen name="ride-details" options={{
-                      headerShown: true, headerTitle: "Ride Details", headerTitleStyle: {
-                        fontSize: 18,
-                        fontWeight: "700",
-                        color: "#003366",
-                      },
-                    }} />
-                    <Stack.Screen
-                      name="ride-results"
-                      options={{
-                        headerShown: true,
-                        headerTitle: "Available Rides",
-                        headerStyle: {
-                          backgroundColor: "#fff",
-                        },
-                        headerTitleStyle: {
-                          fontSize: 18,
-                          fontWeight: "700",
-                          color: "#003366",
-                        },
-                      }}
-                    />
-                  </Stack>
-                  <RoutesModal />
-                  {/* </ThemeProvider> */}
+                  <AppNavigator />
                 </PersistGate>
               </Provider>
             </SnackbarProvider>
@@ -106,33 +165,3 @@ export default function RootLayout() {
     </PaperProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    paddingTop: 50,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  backButton: {
-    padding: 8,
-    marginRight: 12,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#003366",
-  },
-})

@@ -1,4 +1,4 @@
-import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Camera, CameraView } from "expo-camera";
 import { router } from "expo-router";
@@ -12,7 +12,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { Snackbar, TextInput } from "react-native-paper";
 import { useDispatch, useSelector } from "react-redux";
@@ -20,6 +20,7 @@ import { AuthService } from "../../components/services/authService";
 import { uploadMedia } from "../../components/services/cloudinary";
 import { useLoader } from "../../components/ui/Loader";
 import { useSnackbar } from "../../components/ui/SnackbarProvider";
+import { theme, typography } from "../../constants/theme";
 import { inputField } from "../../global-css";
 import { logout, update } from "../../redux/authSlice";
 import { HelperService } from "../../services/helper-service";
@@ -29,9 +30,6 @@ export default function ProfileScreen() {
     name: "R-A-P",
     email: "ridz@gmail.com",
     phone: "+91 9XXXXXXXX",
-    ridesCreated: 15,
-    ridesJoined: 8,
-    rating: 4.8,
   });
   const [cameraFacing, setCameraFacing] = useState("front");
   const [showCamera, setShowCamera] = useState(false);
@@ -61,18 +59,19 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     setUser({ ...selector, name: selector.userName });
-  }, []);
+  }, [selector]);
 
   const updateProfile = async () => {
     try {
       let uploadedUrl = capturedImage || selector.profilePic;
+
       if (localPreviewUri) {
         try {
           showLoader("Uploading profile image...");
           const response = await uploadMedia(localPreviewUri, "image/jpeg");
-          uploadedUrl = response?.secure_url || response?.url || response?.data?.secure_url || uploadedUrl;
-        } catch (err) {
-          console.error("upload error", err);
+          uploadedUrl =
+            response?.secure_url || response?.url || response?.data?.secure_url || uploadedUrl;
+        } catch (_err) {
           snackbar.show("error", "Image upload failed. Try again.");
           return;
         } finally {
@@ -88,8 +87,6 @@ export default function ProfileScreen() {
         ...(uploadedUrl && { profilePic: uploadedUrl }),
       };
 
-      await AuthService.updateProfile(payload);
-
       const updateProfileDetails = {
         userName: payload.userName || selector.userName,
         email: payload.email || selector.email,
@@ -97,6 +94,7 @@ export default function ProfileScreen() {
         profilePic: uploadedUrl || selector.profilePic,
       };
 
+      await AuthService.updateProfile(payload);
       dispatch(update(updateProfileDetails));
       setCapturedImage(uploadedUrl);
       setLocalPreviewUri(null);
@@ -104,8 +102,7 @@ export default function ProfileScreen() {
       setUser({ ...payload, phone: payload.phoneNumber, name: payload.userName });
       setIsEditable(false);
       snackbar.show("success", "Profile updated!");
-    } catch (error) {
-      console.log("erro while updating user details: ", error);
+    } catch (_error) {
       snackbar.show("error", "Error while updating profile");
     }
   };
@@ -134,8 +131,7 @@ export default function ProfileScreen() {
       } else {
         Alert.alert("Capture failed", "Please try again.");
       }
-    } catch (error) {
-      console.error("Error taking picture:", error);
+    } catch (_error) {
       Alert.alert("Error", "Could not take picture");
     } finally {
       hideLoader();
@@ -153,50 +149,67 @@ export default function ProfileScreen() {
     setShowCamera(false);
   };
 
-  const menuItems = [
+  const menuSections = [
     {
-      id: 1,
-      title: "Rides",
-      subtitle: "View your created and joined rides",
-      icon: "car-outline",
-      onPress: () => router.push("/UserRidesScreen"),
+      id: "account",
+      title: "Account",
+      items: [
+        {
+          id: 1,
+          title: "Edit profile",
+          subtitle: "Keep your name and photo updated",
+          icon: "person-outline",
+          onPress: handleEditProfile,
+        },
+        {
+          id: 2,
+          title: "Reset password",
+          subtitle: "Update your account credentials",
+          icon: "lock-closed-outline",
+          onPress: handleResetPassword,
+        },
+      ],
     },
     {
-      id: 2,
-      title: "Requested Rides",
-      subtitle: "View your Requested rides",
-      icon: "hourglass-outline",
-      onPress: () => router.push("/my-requested-ride"),
+      id: "settings",
+      title: "Settings",
+      items: [
+        {
+          id: 5,
+          title: "Vehicles",
+          subtitle: "Manage your saved vehicles",
+          icon: "car-sport-outline",
+          onPress: () => router.push("/user-vehicles"),
+        },
+      ],
     },
-    {
-      id: 3,
-      title: "Vehicles",
-      subtitle: "Manage your vehicles",
-      icon: "star-outline",
-      onPress: () => router.push("/user-vehicles"),
-    }
   ];
 
-  const displayedProfileUri = localPreviewUri || capturedImage || selector.profilePic || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80";
+  const displayedProfileUri =
+    localPreviewUri ||
+    capturedImage ||
+    selector.profilePic ||
+    "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80";
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.profileSection}>
+        <View style={styles.headerCard}>
+          <View style={styles.headerGlow} />
           <View style={styles.profileImageContainer}>
             <Image source={{ uri: displayedProfileUri }} style={styles.profileImage} />
-            {isEditable && (
-              <TouchableOpacity style={styles.editImageButton} onPress={openCamera}>
-                <Ionicons name="camera" size={16} color="white" />
+            {isEditable ? (
+              <TouchableOpacity style={styles.editImageButton} onPress={openCamera} activeOpacity={0.85}>
+                <Ionicons name="camera" size={16} color={theme.colors.white} />
               </TouchableOpacity>
-            )}
+            ) : null}
           </View>
 
           {isEditable ? (
             <TextInput
-              style={inputField}
+              style={styles.nameInput}
               placeholder="Full Name"
-              placeholderTextColor="gray"
+              placeholderTextColor={theme.colors.textMuted}
               autoCapitalize="words"
               value={user.name}
               onChangeText={(text) => setUser({ ...user, name: text })}
@@ -209,46 +222,58 @@ export default function ProfileScreen() {
             </>
           )}
 
-          <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-            {isEditable && (
-              <TouchableOpacity style={styles.editProfileButton} onPress={() => setIsEditable(false)}>
-                <Text style={styles.editProfileText}>Cancel</Text>
+          <View style={styles.actionRow}>
+            {isEditable ? (
+              <TouchableOpacity style={styles.secondaryAction} onPress={() => setIsEditable(false)} activeOpacity={0.85}>
+                <Text style={styles.secondaryActionText}>Cancel</Text>
               </TouchableOpacity>
-            )}
-
+            ) : null}
             <TouchableOpacity
-              style={styles.editProfileButton}
+              style={styles.primaryAction}
               onPress={isEditable ? updateProfile : handleEditProfile}
+              activeOpacity={0.85}
             >
-              <Text style={styles.editProfileText}>
-                {isEditable ? "Update" : "Edit Profile"}
-              </Text>
+              <Text style={styles.primaryActionText}>{isEditable ? "Save changes" : "Edit profile"}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <View style={styles.menuContainer}>
-          {menuItems.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.menuItem} onPress={item.onPress}>
-              <View style={styles.menuIconContainer}>
-                <Ionicons name={item.icon} size={24} color="#007AFF" />
-              </View>
-              <View style={styles.menuContent}>
-                <Text style={styles.menuTitle}>{item.title}</Text>
-                <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
-            </TouchableOpacity>
-          ))}
+        <View style={styles.activityNoticeWrap}>
+          <TouchableOpacity style={styles.activityNotice} onPress={() => router.push("/activity")} activeOpacity={0.85}>
+            <View style={styles.activityNoticeIcon}>
+              <Ionicons name="reader-outline" size={18} color={theme.colors.primary} />
+            </View>
+            <View style={styles.activityNoticeBody}>
+              <Text style={styles.activityNoticeTitle}>My Activity moved here</Text>
+              <Text style={styles.activityNoticeText}>Use the My Activity tab for Offered Rides and Requested Rides.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.resetPasswordButton} onPress={handleResetPassword}>
-          <FontAwesome name="lock" size={22} color="#007AFF" />
-          <Text style={styles.resetPasswordText}>Reset Password</Text>
-        </TouchableOpacity>
+        {menuSections.map((section) => (
+          <View key={section.id} style={styles.sectionWrap}>
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+            <View style={styles.menuContainer}>
+              {section.items.map((item, index) => (
+                <TouchableOpacity key={item.id} style={styles.menuItem} onPress={item.onPress} activeOpacity={0.85}>
+                  <View style={styles.menuIconContainer}>
+                    <Ionicons name={item.icon} size={20} color={theme.colors.primary} />
+                  </View>
+                  <View style={styles.menuContent}>
+                    <Text style={styles.menuTitle}>{item.title}</Text>
+                    <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+                  {index !== section.items.length - 1 ? <View style={styles.menuDivider} /> : null}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ))}
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={22} color="#FF3B30" />
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.85}>
+          <Ionicons name="log-out-outline" size={22} color={theme.colors.error} />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
 
@@ -262,17 +287,17 @@ export default function ProfileScreen() {
               <Image source={{ uri: previewUri }} style={{ width: "100%", height: "80%" }} />
               <View style={{ flexDirection: "row", justifyContent: "space-around", padding: 16 }}>
                 <TouchableOpacity
-                  style={[styles.controlButton, { backgroundColor: "#FF3B30", paddingHorizontal: 24 }]}
+                  style={[styles.controlButton, { backgroundColor: theme.colors.error, paddingHorizontal: 24 }]}
                   onPress={cancelPreview}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "700" }}>Cancel</Text>
+                  <Text style={{ color: theme.colors.white, fontWeight: "700" }}>Cancel</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.controlButton, { backgroundColor: "#007AFF", paddingHorizontal: 24 }]}
+                  style={[styles.controlButton, { backgroundColor: theme.colors.primary, paddingHorizontal: 24 }]}
                   onPress={confirmPreview}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "700" }}>Use Photo</Text>
+                  <Text style={{ color: theme.colors.white, fontWeight: "700" }}>Use Photo</Text>
                 </TouchableOpacity>
               </View>
             </>
@@ -288,27 +313,27 @@ export default function ProfileScreen() {
 
               <View style={styles.cameraControls}>
                 <TouchableOpacity
-                  style={[styles.controlButton, { backgroundColor: "#FF3B30" }]}
+                  style={[styles.controlButton, { backgroundColor: theme.colors.error }]}
                   onPress={() => {
                     hideLoader();
                     setShowCamera(false);
                   }}
                 >
-                  <Ionicons name="close" size={30} color="white" />
+                  <Ionicons name="close" size={30} color={theme.colors.white} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.controlButton, { backgroundColor: "#007AFF" }]}
+                  style={[styles.controlButton, { backgroundColor: theme.colors.primary }]}
                   onPress={takePicture}
                 >
-                  <Ionicons name="camera" size={30} color="white" />
+                  <Ionicons name="camera" size={30} color={theme.colors.white} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.controlButton, { backgroundColor: "#34C759" }]}
+                  style={[styles.controlButton, { backgroundColor: theme.colors.accent }]}
                   onPress={() => setCameraFacing((f) => (f === "front" ? "back" : "front"))}
                 >
-                  <Ionicons name="camera-reverse" size={28} color="white" />
+                  <Ionicons name="camera-reverse" size={28} color={theme.colors.white} />
                 </TouchableOpacity>
               </View>
             </>
@@ -316,12 +341,7 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
-      <Snackbar
-        visible={isSnackbarVisible}
-        onDismiss={() => setIsSnackbarVisible(false)}
-        duration={3000}
-        style={styles.snackbar}
-      >
+      <Snackbar visible={isSnackbarVisible} onDismiss={() => setIsSnackbarVisible(false)} duration={3000} style={styles.snackbar}>
         Logged out successfully!
       </Snackbar>
     </SafeAreaView>
@@ -329,127 +349,222 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8f9fa" },
-  scrollContainer: { paddingVertical: 24 },
-  profileSection: {
-    backgroundColor: "#fff",
-    alignItems: "center",
-    padding: 24,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-    elevation: 3,
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
   },
-  profileImageContainer: { position: "relative", marginBottom: 16 },
+  scrollContainer: {
+    paddingBottom: theme.spacing.xxxl,
+  },
+  headerCard: {
+    backgroundColor: "#FFF3E8",
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.xxxl,
+    paddingBottom: theme.spacing.xxl,
+    marginBottom: theme.spacing.xl,
+    overflow: "hidden",
+  },
+  headerGlow: {
+    position: "absolute",
+    top: -36,
+    right: -24,
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    backgroundColor: "#FFE1CC",
+  },
+  profileImageContainer: {
+    position: "relative",
+    marginBottom: theme.spacing.lg,
+  },
   profileImage: {
     width: 110,
     height: 110,
     borderRadius: 55,
-    borderWidth: 3,
-    borderColor: "#007AFF",
+    borderWidth: 4,
+    borderColor: theme.colors.primary,
   },
   editImageButton: {
     position: "absolute",
     right: 0,
     bottom: 0,
-    backgroundColor: "#007AFF",
+    backgroundColor: theme.colors.primary,
     width: 32,
     height: 32,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    borderColor: "#fff",
+    borderColor: theme.colors.white,
   },
-  userName: { fontSize: 22, fontWeight: "700", color: "#333", marginBottom: 4 },
-  userEmail: { fontSize: 15, color: "#666" },
-  userPhone: { fontSize: 15, color: "#666", marginBottom: 12 },
-  editProfileButton: {
+  nameInput: {
+    ...inputField,
+    width: "100%",
+    marginBottom: theme.spacing.lg,
+  },
+  userName: {
+    ...typography.headingLg,
+    marginBottom: theme.spacing.xs,
+  },
+  userEmail: {
+    ...typography.bodyMd,
+  },
+  userPhone: {
+    ...typography.bodyMd,
+    marginBottom: theme.spacing.lg,
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+  },
+  primaryAction: {
+    minHeight: 44,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.full,
+    paddingHorizontal: theme.spacing.xl,
+    alignItems: "center",
+    justifyContent: "center",
+    ...theme.shadows.button,
+  },
+  primaryActionText: {
+    color: theme.colors.white,
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.md,
+  },
+  secondaryAction: {
+    minHeight: 44,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: theme.spacing.xl,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryActionText: {
+    color: theme.colors.textSecondary,
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.md,
+  },
+  activityNoticeWrap: {
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+  },
+  activityNotice: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#E9F3FF",
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginTop: 8,
+    padding: theme.spacing.lg,
+    backgroundColor: theme.colors.skyBlue,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadows.card,
   },
-  editProfileText: {
-    marginLeft: 6,
-    color: "#007AFF",
-    fontWeight: "600",
-    fontSize: 15,
+  activityNoticeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: theme.spacing.md,
+  },
+  activityNoticeBody: {
+    flex: 1,
+  },
+  activityNoticeTitle: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+  },
+  activityNoticeText: {
+    marginTop: theme.spacing.xs,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+  },
+  sectionWrap: {
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+  },
+  sectionTitle: {
+    ...typography.label,
+    marginBottom: theme.spacing.sm,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
   },
   menuContainer: {
-    backgroundColor: "#fff",
-    marginHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-    elevation: 3,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadows.card,
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F2F2F7",
+    padding: theme.spacing.lg,
+    position: "relative",
   },
   menuIconContainer: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#E9F3FF",
+    backgroundColor: theme.colors.surface,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: theme.spacing.md,
   },
-  menuContent: { flex: 1 },
-  menuTitle: { fontSize: 16, fontWeight: "600", color: "#333" },
-  menuSubtitle: { fontSize: 13, color: "#666" },
-  resetPasswordButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-    marginHorizontal: 16,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#007AFF",
-    marginBottom: 12,
+  menuContent: {
+    flex: 1,
   },
-  resetPasswordText: {
-    marginLeft: 8,
-    color: "#007AFF",
-    fontWeight: "600",
-    fontSize: 15,
+  menuTitle: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+  },
+  menuSubtitle: {
+    marginTop: theme.spacing.xs,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+  },
+  menuDivider: {
+    position: "absolute",
+    left: 70,
+    right: theme.spacing.lg,
+    bottom: 0,
+    height: 1,
+    backgroundColor: theme.colors.border,
   },
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fff",
-    marginHorizontal: 16,
-    padding: 14,
-    borderRadius: 12,
+    backgroundColor: theme.colors.white,
+    marginHorizontal: theme.spacing.lg,
+    padding: theme.spacing.lg,
+    borderRadius: theme.borderRadius.full,
     borderWidth: 1,
-    borderColor: "#FF3B30",
-    marginBottom: 12,
+    borderColor: theme.colors.error,
+    marginBottom: theme.spacing.md,
   },
   logoutText: {
-    marginLeft: 8,
-    color: "#FF3B30",
-    fontWeight: "600",
-    fontSize: 15,
+    marginLeft: theme.spacing.sm,
+    color: theme.colors.error,
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.md,
   },
   versionText: {
     textAlign: "center",
-    color: "#999",
-    fontSize: 12,
-    marginBottom: 20,
+    color: theme.colors.textMuted,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.sm,
   },
   cameraContainer: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: theme.colors.black,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -469,7 +584,7 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 50,
   },
-  snackbar: { 
-    backgroundColor: "#007AFF",
+  snackbar: {
+    backgroundColor: theme.colors.primary,
   },
 });

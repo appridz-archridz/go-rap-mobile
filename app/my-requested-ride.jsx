@@ -1,6 +1,6 @@
 import { FontAwesome } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import { requestRideService } from "../services/request-ride-service";
+import { theme } from "../constants/theme";
 
 const MyRequestRides = () => {
   const selector = useSelector((state) => state.auth);
@@ -22,17 +23,19 @@ const MyRequestRides = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [hasMore, setHasMore] = useState(true);
+  const [activeFilter, setActiveFilter] = useState("all");
   const [payload, setPayload] = useState({
     pageNumber: 0,
     pageSize: 15,
     userId: selector.userId,
   });
 
-  const getUserRides = async (isLoadMore = false) => {
+  const getUserRides = useCallback(async (isLoadMore = false) => {
     if (loading || (!isLoadMore && refreshing)) return;
     if (isLoadMore && !hasMore) return;
 
-    isLoadMore ? setLoading(true) : setRefreshing(true);
+    if (isLoadMore) setLoading(true);
+    else setRefreshing(true);
     setError(null);
 
     try {
@@ -46,14 +49,13 @@ const MyRequestRides = () => {
       }
 
       setHasMore(newRides.length === payload.pageSize);
-    } catch (error) {
-      console.error("Error fetching user rides:", error);
+    } catch (_fetchError) {
       setError("Failed to load your rides. Please try again.");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [hasMore, loading, payload, refreshing]);
 
   const handleLoadMore = () => {
     if (!loading && hasMore) {
@@ -67,31 +69,26 @@ const MyRequestRides = () => {
   };
 
   const handleEdit = (rideId) => {
-   router.push(`/request-ride?id=${rideId}`);
-
+    router.push(`/request-ride?id=${rideId}`);
   };
 
   const handleCancel = (rideId) => {
     Alert.alert("Cancel Ride", "Are you sure you want to cancel this ride?", [
-      {
-        text: "No",
-        style: "cancel",
-      },
+      { text: "No", style: "cancel" },
       {
         text: "Yes",
+        style: "destructive",
         onPress: async () => {
           try {
-             const responnse=await requestRideService.cancelRide(rideId);
-             if(responnse.data.statusCode==="200 OK"){
-            Alert.alert("Success", "Ride cancelled successfully");
-             }
-         
+            const responnse = await requestRideService.cancelRide(rideId);
+            if (responnse.data.statusCode === "200 OK") {
+              Alert.alert("Success", "Ride cancelled successfully");
+            }
             handleRefresh();
-          } catch (error) {
+          } catch (_cancelError) {
             Alert.alert("Error", "Failed to cancel ride. Please try again.");
           }
         },
-        style: "destructive",
       },
     ]);
   };
@@ -100,386 +97,449 @@ const MyRequestRides = () => {
     if (selector.userId) {
       getUserRides(payload.pageNumber > 0);
     }
-  }, [payload, selector.userId]);
+  }, [getUserRides, payload, selector.userId]);
 
-  const formatLocation = (location) => {
-    return location.split(",")[0].trim();
-  };
+  const formatLocation = (location) => location.split(",")[0].trim();
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-IN", {
       day: "2-digit",
-      month: "2-digit",
+      month: "short",
       year: "numeric",
     });
   };
 
-  const formatTime = (timeString) => {
-    return timeString.substring(0, 5);
-  };
+  const formatTime = (timeString) => timeString.substring(0, 5);
 
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
+  const getStatusTokens = (status) => {
+    switch ((status || "").toLowerCase()) {
+      case "confirmed":
       case "active":
-        return "#10b981";
+        return { bg: "#E8FBF5", text: theme.colors.accent };
       case "cancelled":
-        return "#ef4444";
-      case "completed":
-        return "#6b7280";
+        return { bg: "#FFF1F1", text: theme.colors.error };
+      case "pending":
+        return { bg: "#FFF7DA", text: "#B98100" };
       default:
-        return "#3b82f6";
+        return { bg: theme.colors.skyBlue, text: theme.colors.primary };
     }
   };
 
-  const getStatusBgColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case "active":
-        return "#d1fae5";
-      case "cancelled":
-        return "#fee2e2";
-      case "completed":
-        return "#e5e7eb";
-      default:
-        return "#dbeafe";
-    }
+  const filterTabs = [
+    { key: "all", label: "All" },
+    { key: "pending", label: "Pending" },
+    { key: "confirmed", label: "Confirmed" },
+    { key: "cancelled", label: "Cancelled" },
+  ];
+
+  const filteredRides = useMemo(() => {
+    if (activeFilter === "all") return rides;
+    return rides.filter((ride) => {
+      const status = (ride.rideStatus || ride.status || "").toLowerCase();
+      if (activeFilter === "confirmed") return status === "confirmed" || status === "active";
+      return status === activeFilter;
+    });
+  }, [activeFilter, rides]);
+
+  const renderRide = ({ item }) => {
+    const status = item.rideStatus || item.status || "Pending";
+    const statusTokens = getStatusTokens(status);
+
+    return (
+      <View style={styles.rideCard}>
+        <View style={styles.cardHeader}>
+          <View style={[styles.statusBadge, { backgroundColor: statusTokens.bg }]}>
+            <Text style={[styles.statusText, { color: statusTokens.text }]}>
+              {status.toUpperCase()}
+            </Text>
+          </View>
+          <Text style={styles.priceText}>Rs {item.offeredPrice}</Text>
+        </View>
+
+        <View style={styles.routeBlock}>
+          <View style={styles.routeMarkerColumn}>
+            <View style={[styles.routeDot, styles.routeDotStart]} />
+            <View style={styles.routeLine} />
+            <View style={[styles.routeDot, styles.routeDotEnd]} />
+          </View>
+          <View style={styles.routeTextColumn}>
+            <View>
+              <Text style={styles.routeLabel}>From</Text>
+              <Text style={styles.locationText} numberOfLines={2}>
+                {formatLocation(item.startLocation)}
+              </Text>
+            </View>
+            <View style={styles.routeGap} />
+            <View>
+              <Text style={styles.routeLabel}>To</Text>
+              <Text style={styles.locationText} numberOfLines={2}>
+                {formatLocation(item.endLocation)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.detailsRow}>
+          <View style={styles.infoChip}>
+            <FontAwesome name="calendar" size={12} color={theme.colors.primary} />
+            <Text style={styles.infoChipText}>{formatDate(item.rideDate)}</Text>
+          </View>
+          <View style={styles.infoChip}>
+            <FontAwesome name="clock-o" size={12} color={theme.colors.primary} />
+            <Text style={styles.infoChipText}>{formatTime(item.rideTime)}</Text>
+          </View>
+          <View style={styles.infoChip}>
+            <FontAwesome name="users" size={12} color={theme.colors.primary} />
+            <Text style={styles.infoChipText}>{item.numberOfPassengers} seats</Text>
+          </View>
+        </View>
+
+        {(!item.rideStatus || item.rideStatus?.toLowerCase() !== "cancelled") ? (
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.editButton]}
+              onPress={() => handleEdit(item.rideId)}
+              activeOpacity={0.85}
+            >
+              <FontAwesome name="edit" size={15} color={theme.colors.primary} />
+              <Text style={styles.editButtonText}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.cancelButton]}
+              onPress={() => handleCancel(item.rideId)}
+              activeOpacity={0.85}
+            >
+              <FontAwesome name="times-circle" size={15} color={theme.colors.error} />
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      </View>
+    );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Requested Rides</Text>
-        <Text style={styles.headerSubtitle}>Manage your ride requests</Text>
+        <Text style={styles.eyebrow}>My activity</Text>
+        <Text style={styles.title}>Requested rides</Text>
+        <Text style={styles.subtitle}>Track, edit, or cancel the ride requests you have posted.</Text>
       </View>
 
-      {error && (
-        <View style={styles.errorContainer}>
+      <ScrollTabs activeFilter={activeFilter} setActiveFilter={setActiveFilter} tabs={filterTabs} />
+
+      {error ? (
+        <View style={styles.errorBanner}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={handleRefresh} style={styles.retryButton}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+          <TouchableOpacity onPress={handleRefresh} activeOpacity={0.85}>
+            <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      )}
+      ) : null}
 
       <FlatList
-        data={rides}
+        data={filteredRides}
         keyExtractor={(item) => item.rideId}
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            colors={["#007bff"]}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[theme.colors.primary]} />
         }
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
+        renderItem={renderRide}
         ListEmptyComponent={
           !loading && !refreshing ? (
-            <View style={styles.emptyContainer}>
-              <FontAwesome name="inbox" size={64} color="#d1d5db" />
-              <Text style={styles.emptyText}>No rides found</Text>
-              <Text style={styles.emptySubtext}>
-                Your requested rides will appear here
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <FontAwesome name="inbox" size={28} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>No rides found</Text>
+              <Text style={styles.emptyText}>
+                Your requested rides will appear here. Pull down to refresh when needed.
               </Text>
             </View>
           ) : null
         }
         ListFooterComponent={
           loading && rides.length > 0 ? (
-            <ActivityIndicator
-              size="large"
-              color="#007bff"
-              style={styles.loadingFooter}
-            />
+            <ActivityIndicator size="large" color={theme.colors.primary} style={styles.footerLoader} />
           ) : null
         }
-        renderItem={({ item }) => (
-          <View style={styles.rideCard}>
-            <View style={styles.statusContainer}>
-              <View
-                style={[
-                  styles.statusBadge,
-                  { backgroundColor: getStatusBgColor(item.status) },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.statusText,
-                    { color: getStatusColor(item.status) },
-                  ]}
-                >
-                  {item.rideStatus?.toUpperCase() || "ACTIVE"}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.routeContainer}>
-              <View style={styles.locationRow}>
-                <View style={styles.dotGreen} />
-                <Text style={styles.locationText} numberOfLines={2}>
-                  {formatLocation(item.startLocation)}
-                </Text>
-              </View>
-              <View style={styles.routeLine} />
-              <View style={styles.locationRow}>
-                <View style={styles.dotRed} />
-                <Text style={styles.locationText} numberOfLines={2}>
-                  {formatLocation(item.endLocation)}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.detailsContainer}>
-              <View style={styles.detailRow}>
-                <FontAwesome name="calendar" size={14} color="#6b7280" />
-                <Text style={styles.detailText}>
-                  {formatDate(item.rideDate)}
-                </Text>
-              </View>
-              <View style={styles.detailRow}>
-                <FontAwesome name="clock-o" size={14} color="#6b7280" />
-                <Text style={styles.detailText}>
-                  {formatTime(item.rideTime)}
-                </Text>
-              </View>
-              <View style={styles.detailRow}>
-                <FontAwesome name="road" size={14} color="#6b7280" />
-                <Text style={styles.detailText}>{item.distanceKm} km</Text>
-              </View>
-            </View>
-
-            <View style={styles.bottomRow}>
-              <View style={styles.infoChip}>
-                <FontAwesome name="users" size={12} color="#1e40af" />
-                <Text style={styles.infoText}>
-                  {item.numberOfPassengers} Passengers
-                </Text>
-              </View>
-              <View style={styles.priceContainer}>
-                <Text style={styles.priceLabel}>Fare</Text>
-                <Text style={styles.priceText}>₹{item.offeredPrice}</Text>
-              </View>
-            </View>
-
-            {(!item.rideStatus ||
-              item.rideStatus?.toLowerCase() !== "cancelled") && (
-              <View style={styles.actionButtonsContainer}>
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.editButton]}
-                  onPress={() => handleEdit(item.rideId)}
-                  accessibilityLabel="Edit ride"
-                >
-                  <FontAwesome name="edit" size={16} color="#fff" />
-                  <Text style={styles.actionButtonText}>Edit</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.cancelButton]}
-                  onPress={() => handleCancel(item.rideId)}
-                  accessibilityLabel="Cancel ride"
-                >
-                  <FontAwesome name="times-circle" size={16} color="#fff" />
-                  <Text style={styles.actionButtonText}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        )}
       />
 
-      {refreshing && rides.length === 0 && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007bff" />
+      {refreshing && rides.length === 0 ? (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>Loading your rides...</Text>
         </View>
-      )}
+      ) : null}
     </SafeAreaView>
   );
 };
 
+const ScrollTabs = ({ activeFilter, setActiveFilter, tabs }) => (
+  <View style={styles.tabsWrap}>
+    {tabs.map((tab) => {
+      const active = activeFilter === tab.key;
+      return (
+        <TouchableOpacity
+          key={tab.key}
+          style={[styles.tabChip, active ? styles.tabChipActive : null]}
+          onPress={() => setActiveFilter(tab.key)}
+          activeOpacity={0.85}
+        >
+          <Text style={[styles.tabChipText, active ? styles.tabChipTextActive : null]}>
+            {tab.label}
+          </Text>
+        </TouchableOpacity>
+      );
+    })}
+  </View>
+);
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8fafc" },
+  screen: { flex: 1, backgroundColor: theme.colors.background },
   header: {
-    padding: 20,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
-    alignItems:"center",
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.surface,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#1a1a1a",
-    marginBottom: 4,
+  eyebrow: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.primary,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: theme.spacing.sm,
   },
-  headerSubtitle: { fontSize: 14, color: "#666" },
-  errorContainer: {
-    backgroundColor: "#fee2e2",
-    padding: 16,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 12,
+  title: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.xxxl,
+    color: theme.colors.textPrimary,
+  },
+  subtitle: {
+    marginTop: theme.spacing.sm,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textSecondary,
+  },
+  tabsWrap: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+  },
+  tabChip: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  tabChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  tabChipText: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+  },
+  tabChipTextActive: {
+    color: theme.colors.white,
+  },
+  errorBanner: {
+    marginHorizontal: theme.spacing.xl,
+    marginBottom: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.lg,
+    backgroundColor: "#FFF3F2",
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
   },
   errorText: {
-    color: "#dc2626",
-    fontSize: 14,
     flex: 1,
+    marginRight: theme.spacing.md,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.error,
   },
-  retryButton: {
-    backgroundColor: "#dc2626",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+  retryText: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.primary,
   },
-  retryButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  listContainer: { padding: 16, paddingBottom: 32 },
-  emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 80,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#4b5563",
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: "#9ca3af",
-    marginTop: 8,
-  },
-  loadingContainer: {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: [{ translateX: -50 }, { translateY: -50 }],
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 12,
-    color: "#666",
-    fontSize: 16,
-  },
-  loadingFooter: {
-    paddingVertical: 20,
+  listContent: {
+    paddingHorizontal: theme.spacing.xl,
+    paddingBottom: theme.spacing.xxl,
   },
   rideCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    padding: theme.spacing.lg,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.white,
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.card,
   },
-  statusContainer: {
+  cardHeader: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    marginBottom: 12,
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: theme.spacing.lg,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.full,
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: "700",
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.xs,
     letterSpacing: 0.5,
   },
-  routeContainer: { marginBottom: 16 },
-  locationRow: { flexDirection: "row", alignItems: "center" },
-  dotGreen: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: "#10b981",
+  priceText: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.xl,
+    color: theme.colors.textPrimary,
   },
-  dotRed: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: "#ef4444",
-  },
-  locationText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1a1a1a",
-    marginLeft: 12,
-    flex: 1,
-  },
-  routeLine: {
-    width: 2,
-    height: 24,
-    backgroundColor: "#d1d5db",
-    marginLeft: 5,
-    marginVertical: 4,
-  },
-  divider: { height: 1, backgroundColor: "#e5e7eb", marginVertical: 16 },
-  detailsContainer: {
+  routeBlock: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    marginBottom: 16,
-    flexWrap: "wrap",
+    marginBottom: theme.spacing.lg,
   },
-  detailRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  detailText: { fontSize: 14, color: "#4b5563", fontWeight: "500" },
-  bottomRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  routeMarkerColumn: {
     alignItems: "center",
-    marginBottom: 16,
+    marginRight: theme.spacing.md,
+  },
+  routeDot: {
+    width: 10,
+    height: 10,
+    borderRadius: theme.borderRadius.full,
+  },
+  routeDotStart: { backgroundColor: theme.colors.accent },
+  routeDotEnd: { backgroundColor: theme.colors.primary },
+  routeLine: {
+    flex: 1,
+    width: 2,
+    minHeight: 24,
+    marginVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.border,
+  },
+  routeTextColumn: { flex: 1 },
+  routeLabel: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  routeGap: { height: theme.spacing.md },
+  locationText: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+  },
+  detailsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
   },
   infoChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#eff6ff",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
     gap: 6,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.skyBlue,
   },
-  infoText: { fontSize: 13, color: "#1e40af", fontWeight: "600" },
-  priceContainer: { alignItems: "flex-end" },
-  priceLabel: { fontSize: 12, color: "#6b7280", marginBottom: 2 },
-  priceText: { fontSize: 24, fontWeight: "bold", color: "#10b981" },
-  actionButtonsContainer: {
+  infoChipText: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textPrimary,
+  },
+  actionsRow: {
     flexDirection: "row",
-    gap: 12,
+    gap: theme.spacing.md,
   },
   actionButton: {
     flex: 1,
+    minHeight: 44,
+    borderRadius: theme.borderRadius.full,
     flexDirection: "row",
-    paddingVertical: 12,
-    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    gap: theme.spacing.sm,
+    borderWidth: 1,
   },
   editButton: {
-    backgroundColor: "#007bff",
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.white,
   },
   cancelButton: {
-    backgroundColor: "#ef4444",
+    borderColor: "#F8CACA",
+    backgroundColor: "#FFF6F6",
   },
-  actionButtonText: { color: "#fff", fontSize: 15, fontWeight: "bold" },
+  editButtonText: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.primary,
+  },
+  cancelButtonText: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.error,
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 100,
+    paddingHorizontal: theme.spacing.xl,
+  },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: theme.borderRadius.full,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF3E8",
+    marginBottom: theme.spacing.lg,
+  },
+  emptyTitle: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.xl,
+    color: theme.colors.textPrimary,
+  },
+  emptyText: {
+    marginTop: theme.spacing.sm,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.md,
+    lineHeight: 22,
+    textAlign: "center",
+    color: theme.colors.textSecondary,
+  },
+  footerLoader: { paddingVertical: theme.spacing.xl },
+  loadingOverlay: {
+    position: "absolute",
+    top: "50%",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: theme.spacing.md,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textSecondary,
+  },
 });
 
 export default MyRequestRides;

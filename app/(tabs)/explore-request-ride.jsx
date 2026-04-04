@@ -1,6 +1,6 @@
 import { FontAwesome } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -11,10 +11,11 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { requestRideService } from "../../services/request-ride-service";
+import { theme } from "../../constants/theme";
 
 const ExploreRequestRide = () => {
   const [search, setSearch] = useState("");
@@ -35,403 +36,499 @@ const ExploreRequestRide = () => {
   const handleWhatsApp = (phoneNumber, userName, startLocation, endLocation) => {
     const message = `Hi ${userName}, I'm interested in your ride from ${startLocation} to ${endLocation}.`;
     const url = `whatsapp://send?phone=+91${phoneNumber}&text=${encodeURIComponent(message)}`;
-    
+
     Linking.canOpenURL(url)
       .then((supported) => {
-        if (supported) {
-          return Linking.openURL(url);
-        } else {
-          Alert.alert("Error", "WhatsApp is not installed on this device");
-        }
+        if (supported) return Linking.openURL(url);
+        Alert.alert("Error", "WhatsApp is not installed on this device");
       })
-      .catch((err) => Alert.alert("Error", "Failed to open WhatsApp"));
+      .catch(() => Alert.alert("Error", "Failed to open WhatsApp"));
   };
 
   const handlePhoneCall = (phoneNumber) => {
     const url = `tel:+91${phoneNumber}`;
-    
+
     Linking.canOpenURL(url)
       .then((supported) => {
-        if (supported) {
-          return Linking.openURL(url);
-        } else {
-          Alert.alert("Error", "Unable to make phone calls on this device");
-        }
+        if (supported) return Linking.openURL(url);
+        Alert.alert("Error", "Unable to make phone calls on this device");
       })
-      .catch((err) => Alert.alert("Error", "Failed to initiate call"));
+      .catch(() => Alert.alert("Error", "Failed to initiate call"));
   };
 
-  const getRequestRide = async (isLoadMore = false) => {
+  const getRequestRide = useCallback(async (isLoadMore = false) => {
     if (loading || (!isLoadMore && refreshing)) return;
     if (isLoadMore && !hasMore) return;
 
-    isLoadMore ? setLoading(true) : setRefreshing(true);
+    if (isLoadMore) setLoading(true);
+    else setRefreshing(true);
     setError(null);
 
     try {
       const response = await requestRideService.getRequestRide(payload);
       const newRides = response.data || [];
-      
+
       if (isLoadMore) {
-        setRides(prev => [...prev, ...newRides]);
+        setRides((prev) => [...prev, ...newRides]);
       } else {
         setRides(newRides);
       }
-      
+
       setHasMore(newRides.length === payload.pageSize);
-    } catch (error) {
-      console.error("Error fetching rides:", error);
+    } catch (_fetchError) {
       setError("Failed to load rides. Please try again.");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [hasMore, loading, payload, refreshing]);
 
   const handleLoadMore = () => {
     if (!loading && hasMore) {
-      setPayload(prev => ({ ...prev, pageNumber: prev.pageNumber + 1 }));
+      setPayload((prev) => ({ ...prev, pageNumber: prev.pageNumber + 1 }));
     }
   };
 
   const handleRefresh = () => {
-    setPayload(prev => ({ ...prev, pageNumber: 0 }));
+    setPayload((prev) => ({ ...prev, pageNumber: 0 }));
     setHasMore(true);
   };
 
   useEffect(() => {
     getRequestRide(payload.pageNumber > 0);
-  }, [payload]);
+  }, [getRequestRide, payload]);
 
   const handleNavigate = () => {
     router.push("/request-ride");
   };
 
-  const formatLocation = (location) => {
-    // Extract main location name before the first comma
-    return location.split(',')[0].trim();
-  };
+  const formatLocation = (location) => location.split(",")[0].trim();
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   };
 
-  const formatTime = (timeString) => {
-    return timeString.substring(0, 5); // Extract HH:MM from HH:MM:SS
-  };
+  const formatTime = (timeString) => timeString.substring(0, 5);
+
+  const renderRide = ({ item }) => (
+    <View style={styles.rideCard}>
+      <View style={styles.cardHeader}>
+        <View style={styles.avatar}>
+          <FontAwesome name="user" size={16} color={theme.colors.primary} />
+        </View>
+        <View style={styles.headerTextWrap}>
+          <Text style={styles.userName}>{item.userName}</Text>
+          <Text style={styles.metaText}>Passenger request</Text>
+        </View>
+        <View style={styles.priceBadge}>
+          <Text style={styles.priceBadgeText}>Rs {item.offeredPrice}</Text>
+        </View>
+      </View>
+
+      <View style={styles.routeBlock}>
+        <View style={styles.routeMarkerColumn}>
+          <View style={[styles.routeDot, styles.routeDotStart]} />
+          <View style={styles.routeLine} />
+          <View style={[styles.routeDot, styles.routeDotEnd]} />
+        </View>
+        <View style={styles.routeTextColumn}>
+          <View>
+            <Text style={styles.routeLabel}>From</Text>
+            <Text style={styles.locationText} numberOfLines={2}>
+              {formatLocation(item.startLocation)}
+            </Text>
+          </View>
+          <View style={styles.routeGap} />
+          <View>
+            <Text style={styles.routeLabel}>To</Text>
+            <Text style={styles.locationText} numberOfLines={2}>
+              {formatLocation(item.endLocation)}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.detailsRow}>
+        <View style={styles.infoChip}>
+          <FontAwesome name="calendar" size={12} color={theme.colors.primary} />
+          <Text style={styles.infoChipText}>{formatDate(item.rideDate)}</Text>
+        </View>
+        <View style={styles.infoChip}>
+          <FontAwesome name="clock-o" size={12} color={theme.colors.primary} />
+          <Text style={styles.infoChipText}>{formatTime(item.rideTime)}</Text>
+        </View>
+        <View style={styles.infoChip}>
+          <FontAwesome name="users" size={12} color={theme.colors.primary} />
+          <Text style={styles.infoChipText}>{item.numberOfPassengers} seats</Text>
+        </View>
+      </View>
+
+      <View style={styles.actionsRow}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.secondaryButton]}
+          onPress={() =>
+            handleWhatsApp(
+              item.phoneNumber,
+              item.userName,
+              formatLocation(item.startLocation),
+              formatLocation(item.endLocation)
+            )
+          }
+          activeOpacity={0.85}
+        >
+          <FontAwesome name="whatsapp" size={16} color={theme.colors.primary} />
+          <Text style={styles.secondaryButtonText}>WhatsApp</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.primaryButton]}
+          onPress={() => handlePhoneCall(item.phoneNumber)}
+          activeOpacity={0.85}
+        >
+          <FontAwesome name="phone" size={16} color={theme.colors.white} />
+          <Text style={styles.primaryButtonText}>Call now</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Explore Requested Rides</Text>
+        <Text style={styles.eyebrow}>Explore requests</Text>
+        <Text style={styles.title}>Requested rides</Text>
+        <Text style={styles.subtitle}>Browse riders looking for a matching trip nearby.</Text>
       </View>
-      <Text style={styles.headerSubtitle}>Find a ride</Text>
 
-      <View style={styles.searchContainer}>
+      <View style={styles.searchCard}>
+        <FontAwesome name="search" size={16} color={theme.colors.textMuted} />
         <TextInput
-          style={styles.inputField}
-          placeholder="Search City, Area or Landmark"
-          placeholderTextColor="#999"
+          style={styles.searchInput}
+          placeholder="Search city, area or landmark"
+          placeholderTextColor={theme.colors.textMuted}
           value={search}
           onChangeText={handleSearch}
-          accessibilityLabel="Search rides"
         />
       </View>
 
-      {error && (
-        <View style={styles.errorContainer}>
+      {error ? (
+        <View style={styles.errorBanner}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={handleRefresh} style={styles.retryButton}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+          <TouchableOpacity onPress={handleRefresh} activeOpacity={0.85}>
+            <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      )}
+      ) : null}
 
       <FlatList
         data={rides}
         keyExtractor={(item) => item.rideId}
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={["#007bff"]} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[theme.colors.primary]} />
         }
         onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
+        onEndReachedThreshold={0.4}
+        renderItem={renderRide}
         ListEmptyComponent={
           !loading && !refreshing ? (
-            <Text style={styles.emptyText}>
-              {search ? "No rides match your search." : "No rides available."}
-            </Text>
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <FontAwesome name="map-signs" size={30} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>
+                {search ? "No matching requests" : "No ride requests yet"}
+              </Text>
+              <Text style={styles.emptyText}>
+                {search
+                  ? "Try a nearby landmark or clear the search to see more requests."
+                  : "When passengers publish requests, they will show up here."}
+              </Text>
+            </View>
           ) : null
         }
         ListFooterComponent={
           loading && rides.length > 0 ? (
-            <ActivityIndicator size="large" color="#007bff" style={styles.loadingFooter} />
+            <ActivityIndicator size="large" color={theme.colors.primary} style={styles.footerLoader} />
           ) : null
         }
-        renderItem={({ item }) => (
-          <View style={styles.rideCard}>
-            <View style={styles.userNameContainer}>
-              <FontAwesome name="user-circle" size={16} color="#007bff" />
-              <Text style={styles.userName}>{item.userName}</Text>
-            </View>
-
-            <View style={styles.routeContainer}>
-              <View style={styles.locationRow}>
-                <View style={styles.dotGreen} />
-                <Text style={styles.locationText} numberOfLines={2}>
-                  {formatLocation(item.startLocation)}
-                </Text>
-              </View>
-              <View style={styles.routeLine} />
-              <View style={styles.locationRow}>
-                <View style={styles.dotRed} />
-                <Text style={styles.locationText} numberOfLines={2}>
-                  {formatLocation(item.endLocation)}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.detailsContainer}>
-              <View style={styles.detailRow}>
-                <FontAwesome name="calendar" size={14} color="#6b7280" />
-                <Text style={styles.detailText}>{formatDate(item.rideDate)}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <FontAwesome name="clock-o" size={14} color="#6b7280" />
-                <Text style={styles.detailText}>{formatTime(item.rideTime)}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <FontAwesome name="road" size={14} color="#6b7280" />
-                <Text style={styles.detailText}>{item.distanceKm} km</Text>
-              </View>
-            </View>
-
-            <View style={styles.bottomRow}>
-              <View style={styles.infoChip}>
-                <FontAwesome name="users" size={12} color="#1e40af" />
-                <Text style={styles.infoText}>{item.numberOfPassengers} Passengers</Text>
-              </View>
-              <View style={styles.priceContainer}>
-                <Text style={styles.priceLabel}>Fare</Text>
-                <Text style={styles.priceText}>₹{item.offeredPrice}</Text>
-              </View>
-            </View>
-
-            <View style={styles.contactButtonsContainer}>
-              <TouchableOpacity
-                style={[styles.contactButton, styles.whatsappButton]}
-                onPress={() =>
-                  handleWhatsApp(
-                    item.phoneNumber,
-                    item.userName,
-                    formatLocation(item.startLocation),
-                    formatLocation(item.endLocation)
-                  )
-                }
-                accessibilityLabel="Contact via WhatsApp"
-              >
-                <FontAwesome name="whatsapp" size={18} color="#fff" />
-                <Text style={styles.contactButtonText}>WhatsApp</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.contactButton, styles.phoneButton]}
-                onPress={() => handlePhoneCall(item.phoneNumber)}
-                accessibilityLabel="Call rider"
-              >
-                <FontAwesome name="phone" size={18} color="#fff" />
-                <Text style={styles.contactButtonText}>Call</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
       />
 
-      {refreshing && rides.length === 0 && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007bff" />
-          <Text style={styles.loadingText}>Loading rides...</Text>
+      {refreshing && rides.length === 0 ? (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Loading ride requests...</Text>
         </View>
-      )}
+      ) : null}
 
-      {/* Floating Action Button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={handleNavigate}
-        accessibilityLabel="Request a ride"
-      >
-        <FontAwesome name="plus" size={24} color="#fff" />
+      <TouchableOpacity style={styles.fab} onPress={handleNavigate} activeOpacity={0.85}>
+        <FontAwesome name="plus" size={22} color={theme.colors.white} />
       </TouchableOpacity>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8fafc" },
-  header: { 
-    padding: 20, 
-    paddingTop: 10, 
-    backgroundColor: "#fff", 
+  screen: { flex: 1, backgroundColor: theme.colors.background },
+  header: {
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.surface,
   },
-  headerTitle: { fontSize: 28, fontWeight: "bold", color: "#1a1a1a", marginBottom: 4 },
-  headerSubtitle: { fontSize: 14, color: "#666", marginTop: 4, paddingHorizontal: 20, backgroundColor: "#fff", paddingBottom: 10 },
-  searchContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+  eyebrow: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.primary,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: theme.spacing.sm,
   },
-  inputField: {
-    height: 48,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
+  title: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.xxxl,
+    color: theme.colors.textPrimary,
   },
-  errorContainer: {
-    backgroundColor: "#fee2e2",
-    padding: 16,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 12,
+  subtitle: {
+    marginTop: theme.spacing.sm,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textSecondary,
+  },
+  searchCard: {
+    marginHorizontal: theme.spacing.xl,
+    marginTop: -12,
+    marginBottom: theme.spacing.md,
+    minHeight: 52,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.white,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadows.card,
+  },
+  searchInput: {
+    flex: 1,
+    minHeight: 48,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+  },
+  errorBanner: {
+    marginHorizontal: theme.spacing.xl,
+    marginBottom: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.lg,
+    backgroundColor: "#FFF3F2",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   errorText: {
-    color: "#dc2626",
-    fontSize: 14,
     flex: 1,
+    marginRight: theme.spacing.md,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.error,
   },
-  retryButton: {
-    backgroundColor: "#dc2626",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+  retryText: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.primary,
   },
-  retryButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-  listContainer: { padding: 16, paddingBottom: 100 },
-  emptyText: {
-    textAlign: "center",
-    marginTop: 40,
-    color: "#666",
-    fontSize: 16,
-  },
-  loadingContainer: {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: [{ translateX: -50 }, { translateY: -50 }],
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: 12,
-    color: "#666",
-    fontSize: 16,
-  },
-  loadingFooter: {
-    paddingVertical: 20,
+  listContent: {
+    paddingHorizontal: theme.spacing.xl,
+    paddingBottom: 110,
   },
   rideCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    padding: theme.spacing.lg,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.white,
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.card,
   },
-  userNameContainer: {
+  cardHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
-    gap: 8,
+    marginBottom: theme.spacing.lg,
   },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.borderRadius.full,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF3E8",
+    marginRight: theme.spacing.md,
+  },
+  headerTextWrap: { flex: 1 },
   userName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#007bff",
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.textPrimary,
   },
-  routeContainer: { marginBottom: 16 },
-  locationRow: { flexDirection: "row", alignItems: "center" },
-  dotGreen: { width: 12, height: 12, borderRadius: 6, backgroundColor: "#10b981" },
-  dotRed: { width: 12, height: 12, borderRadius: 6, backgroundColor: "#ef4444" },
-  locationText: { fontSize: 16, fontWeight: "600", color: "#1a1a1a", marginLeft: 12, flex: 1 },
-  routeLine: { width: 2, height: 24, backgroundColor: "#d1d5db", marginLeft: 5, marginVertical: 4 },
-  divider: { height: 1, backgroundColor: "#e5e7eb", marginVertical: 16 },
-  detailsContainer: { flexDirection: "row", justifyContent: "space-around", marginBottom: 16, flexWrap: "wrap" },
-  detailRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  detailText: { fontSize: 14, color: "#4b5563", fontWeight: "500" },
-  bottomRow: {
+  metaText: {
+    marginTop: 2,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+  },
+  priceBadge: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.secondary,
+  },
+  priceBadgeText: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textPrimary,
+  },
+  routeBlock: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    marginBottom: theme.spacing.lg,
+  },
+  routeMarkerColumn: {
     alignItems: "center",
-    marginBottom: 16,
+    marginRight: theme.spacing.md,
+  },
+  routeDot: {
+    width: 10,
+    height: 10,
+    borderRadius: theme.borderRadius.full,
+  },
+  routeDotStart: { backgroundColor: theme.colors.accent },
+  routeDotEnd: { backgroundColor: theme.colors.primary },
+  routeLine: {
+    flex: 1,
+    width: 2,
+    minHeight: 24,
+    marginVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.border,
+  },
+  routeTextColumn: { flex: 1 },
+  routeLabel: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  routeGap: { height: theme.spacing.md },
+  locationText: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+  },
+  detailsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
   },
   infoChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#eff6ff",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
     gap: 6,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.skyBlue,
   },
-  infoText: { fontSize: 13, color: "#1e40af", fontWeight: "600" },
-  priceContainer: { alignItems: "flex-end" },
-  priceLabel: { fontSize: 12, color: "#6b7280", marginBottom: 2 },
-  priceText: { fontSize: 24, fontWeight: "bold", color: "#10b981" },
-  contactButtonsContainer: {
-    flexDirection: "row",
-    gap: 12,
+  infoChipText: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textPrimary,
   },
-  contactButton: {
+  actionsRow: { flexDirection: "row", gap: theme.spacing.md },
+  actionButton: {
     flex: 1,
+    minHeight: 46,
+    borderRadius: theme.borderRadius.full,
     flexDirection: "row",
-    paddingVertical: 12,
-    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    gap: theme.spacing.sm,
   },
-  whatsappButton: {
-    backgroundColor: "#25D366",
+  primaryButton: {
+    backgroundColor: theme.colors.primary,
+    ...theme.shadows.button,
   },
-  phoneButton: {
-    backgroundColor: "#007bff",
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.white,
   },
-  contactButtonText: { color: "#fff", fontSize: 15, fontWeight: "bold" },
+  primaryButtonText: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.white,
+  },
+  secondaryButtonText: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.primary,
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 100,
+    paddingHorizontal: theme.spacing.xl,
+  },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: theme.borderRadius.full,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF3E8",
+    marginBottom: theme.spacing.lg,
+  },
+  emptyTitle: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.xl,
+    color: theme.colors.textPrimary,
+  },
+  emptyText: {
+    marginTop: theme.spacing.sm,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.md,
+    lineHeight: 22,
+    textAlign: "center",
+    color: theme.colors.textSecondary,
+  },
+  footerLoader: { paddingVertical: theme.spacing.xl },
+  loadingOverlay: {
+    position: "absolute",
+    top: "50%",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: theme.spacing.md,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textSecondary,
+  },
   fab: {
     position: "absolute",
-    bottom: 20,
-    right: 20,
-    backgroundColor: "#007bff",
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: "center",
+    right: theme.spacing.xl,
+    bottom: theme.spacing.xl,
+    width: 58,
+    height: 58,
+    borderRadius: theme.borderRadius.full,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    justifyContent: "center",
+    backgroundColor: theme.colors.primary,
+    ...theme.shadows.button,
   },
 });
 

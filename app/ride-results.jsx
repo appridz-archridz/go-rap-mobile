@@ -1,6 +1,6 @@
-import { FontAwesome } from "@expo/vector-icons";
+import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -11,16 +11,37 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { theme, typography } from "../constants/theme";
 import { getRides } from "../services/ride-service";
-import { olaService } from "../services/thirdPartyApis";
 
 export default function RideResultsScreen() {
   const params = useLocalSearchParams();
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [routes, setRoutes] = useState([]);
+  const [activeFilter, setActiveFilter] = useState("Today");
   const slideAnim = useRef(new Animated.Value(1000)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const fetchRides = useCallback(async () => {
+    setLoading(true);
+    try {
+      const currentDate = new Date().toISOString().split("T")[0];
+      const searchDTO = {
+        sourceLatitude: parseFloat(params.sourceLatitude),
+        sourceLongitude: parseFloat(params.sourceLongitude),
+        destinationLatitude: parseFloat(params.destinationLatitude),
+        destinationLongitude: parseFloat(params.destinationLongitude),
+        localDate: currentDate,
+      };
+
+      const ridesData = await getRides(searchDTO);
+      setRides(ridesData?.data?.data || []);
+    } catch (_error) {
+      Alert.alert("Error", "Failed to fetch rides");
+    } finally {
+      setLoading(false);
+    }
+  }, [params.destinationLatitude, params.destinationLongitude, params.sourceLatitude, params.sourceLongitude]);
 
   useEffect(() => {
     Animated.parallel([
@@ -36,58 +57,11 @@ export default function RideResultsScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-    fetchRidesAndRoutes();
-  }, []);
 
-  const fetchRidesAndRoutes = async () => {
-    console.log('Begin ride-results.jsx -> fetchRidesAndRoutes()');
+    fetchRides();
+  }, [fadeAnim, fetchRides, slideAnim]);
 
-    try {
-      const currentDate = new Date().toISOString().split("T")[0];
-      const searchDTO = {
-        sourceLatitude: parseFloat(params.sourceLatitude),
-        sourceLongitude: parseFloat(params.sourceLongitude),
-        destinationLatitude: parseFloat(params.destinationLatitude),
-        destinationLongitude: parseFloat(params.destinationLongitude),
-        localDate: currentDate,
-      };
-
-      const ridesData = await getRides(searchDTO);
-
-      setRides(ridesData?.data?.data);
-
-      const origin = {
-        lat: parseFloat(params.sourceLatitude),
-        lng: parseFloat(params.sourceLongitude),
-      };
-      const destination = {
-        lat: parseFloat(params.destinationLatitude),
-        lng: parseFloat(params.destinationLongitude),
-      };
-      const routesData = await olaService.getRoute(origin, destination);
-      setRoutes(routesData);
-    } catch (error) {
-      Alert.alert("Error", "Failed to fetch rides in ride-results");
-    } finally {
-    }
-  };
-
-  const handleBack = () => {
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 1000,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      router.replace('/search-ride');
-    });
-  };
+  const filterChips = ["Today", "Lowest Price", "Seats"];
 
   const RideCard = ({ item, index }) => {
     const cardAnim = useRef(new Animated.Value(0)).current;
@@ -95,12 +69,12 @@ export default function RideResultsScreen() {
     useEffect(() => {
       Animated.spring(cardAnim, {
         toValue: 1,
-        delay: index * 100,
+        delay: index * 90,
         tension: 50,
         friction: 7,
         useNativeDriver: true,
       }).start();
-    }, []);
+    }, [cardAnim, index]);
 
     return (
       <Animated.View
@@ -112,128 +86,110 @@ export default function RideResultsScreen() {
               {
                 translateY: cardAnim.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [50, 0],
-                }),
-              },
-              {
-                scale: cardAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.9, 1],
+                  outputRange: [36, 0],
                 }),
               },
             ],
           },
         ]}
       >
-        <View style={styles.rideHeader}>
-          <FontAwesome name="car" size={20} color="#0051a8" />
-          <Text style={styles.rideTitle}>
-            {item?.startPoint?.split(",")[0]} → {item?.destinationPoint?.split(",")[0]}
-          </Text>
-        </View>
-        <View style={styles.rideDetails}>
-          <View style={styles.detailRow}>
-            <FontAwesome name="users" size={14} color="#555" />
-            <Text style={styles.rideSubtitle}>{item.availableSeats == 1 ? `${item.availableSeats} seat available` : `${item.availableSeats} seats available`}</Text>
+        <View style={styles.cardTop}>
+          <View style={styles.avatarCircle}>
+            <FontAwesome name="car" size={18} color={theme.colors.primary} />
           </View>
-          <View style={styles.detailRow}>
-            <FontAwesome name="calendar" size={14} color="#555" />
-            <Text style={styles.rideSubtitle}>
-              {item.rideDate} at {item.rideTime}
+          <View style={styles.cardTopContent}>
+            <Text style={styles.routeTitle}>
+              {item?.startPoint?.split(",")[0]} to {item?.destinationPoint?.split(",")[0]}
             </Text>
+            <Text style={styles.routeSubtitle}>Shared ride with verified trip details</Text>
+          </View>
+          <View style={styles.priceBadge}>
+            <Text style={styles.priceBadgeText}>{item.availableSeats} seats</Text>
           </View>
         </View>
+
+        <View style={styles.routeSection}>
+          <View style={styles.routeDotColumn}>
+            <View style={styles.sourceDot} />
+            <View style={styles.routeLine} />
+            <View style={styles.destinationDot} />
+          </View>
+          <View style={styles.routeTextColumn}>
+            <Text style={styles.routePoint}>{item?.startPoint}</Text>
+            <Text style={styles.routePoint}>{item?.destinationPoint}</Text>
+          </View>
+        </View>
+
+        <View style={styles.metaRow}>
+          <View style={styles.metaChip}>
+            <Ionicons name="calendar-outline" size={14} color={theme.colors.primary} />
+            <Text style={styles.metaText}>{item.rideDate}</Text>
+          </View>
+          <View style={styles.metaChip}>
+            <Ionicons name="time-outline" size={14} color={theme.colors.primary} />
+            <Text style={styles.metaText}>{item.rideTime}</Text>
+          </View>
+        </View>
+
         <TouchableOpacity
           style={styles.viewButton}
           onPress={() => router.push(`/ride-details?id=${item.id}`)}
+          activeOpacity={0.85}
         >
           <Text style={styles.viewButtonText}>View Details</Text>
-          <FontAwesome name="arrow-right" size={14} color="#fff" />
+          <Ionicons name="arrow-forward" size={16} color={theme.colors.white} />
         </TouchableOpacity>
       </Animated.View>
     );
   };
 
-  const renderRideCard = ({ item, index }) => (
-    <RideCard item={item} index={index} />
-  );
-
-  const renderRouteCard = ({ item, index }) => (
-    <View style={styles.routeCard}>
-      <Text style={styles.routeTitle}>Route {index + 1}</Text>
-      <View style={styles.routeInfo}>
-        <View style={styles.routeDetail}>
-          <FontAwesome name="road" size={14} color="#0051a8" />
-          <Text style={styles.routeSubtitle}>
-            {(item.legs?.[0]?.distance / 1000).toFixed(1)} km
-          </Text>
-        </View>
-        <View style={styles.routeDetail}>
-          <FontAwesome name="clock-o" size={14} color="#0051a8" />
-          <Text style={styles.routeSubtitle}>
-            {(item.legs?.[0]?.duration / 60).toFixed(0)} min
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        {
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }],
-        },
-      ]}
-    >
-      {/* Header */}
-      {/* <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <FontAwesome name="arrow-left" size={20} color="#003366" />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Available Rides</Text>
-          <Text style={styles.headerSubtitle}>
-            {params.fromDescription.split(",")[0]} → {params.toDescription.split(",")[0]}
-          </Text>
-        </View>
-      </View> */}
+    <Animated.View style={[styles.container, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Available Rides</Text>
+        <Text style={styles.headerSubtitle}>
+          {String(params.fromDescription || "").split(",")[0]} to {String(params.toDescription || "").split(",")[0]}
+        </Text>
+      </View>
 
-      {/* Rides Section */}
+      <View style={styles.filterRow}>
+        {filterChips.map((chip) => (
+          <TouchableOpacity
+            key={chip}
+            style={[styles.filterChip, activeFilter === chip ? styles.filterChipActive : null]}
+            onPress={() => setActiveFilter(chip)}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.filterChipText, activeFilter === chip ? styles.filterChipTextActive : null]}>
+              {chip}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0051a8" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>Finding rides for you...</Text>
         </View>
+      ) : rides.length > 0 ? (
+        <FlatList
+          data={rides}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item, index }) => <RideCard item={item} index={index} />}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
       ) : (
-        <View style={styles.ridesSection}>
-          {rides.length > 0 ? (
-            <>
-              <Text style={styles.sectionHeader}>
-                {rides.length} {rides.length === 1 ? "Ride" : "Rides"} Found
-              </Text>
-              <FlatList
-                data={rides}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item, index }) => <RideCard item={item} index={index} />}
-                contentContainerStyle={styles.ridesList}
-                showsVerticalScrollIndicator={false}
-              />
-            </>
-          ) : (
-            <View style={styles.noRidesContainer}>
-              <FontAwesome name="frown-o" size={60} color="#ccc" />
-              <Text style={styles.noRideText}>No rides found for this route</Text>
-              <Text style={styles.noRideSubtext}>
-                Try searching for a different date or location
-              </Text>
-              <TouchableOpacity style={styles.retryButton} onPress={handleBack}>
-                <Text style={styles.retryButtonText}>Search Again</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+        <View style={styles.emptyState}>
+          <View style={styles.emptyIconWrap}>
+            <Ionicons name="search-outline" size={38} color={theme.colors.textMuted} />
+          </View>
+          <Text style={styles.emptyTitle}>No rides found</Text>
+          <Text style={styles.emptySubtitle}>Try a different route, date, or search again a little later.</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => router.replace("/search-ride")} activeOpacity={0.85}>
+            <Text style={styles.retryButtonText}>Search Again</Text>
+          </TouchableOpacity>
         </View>
       )}
     </Animated.View>
@@ -243,185 +199,214 @@ export default function RideResultsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: theme.colors.background,
   },
-  // header: {
-  //   flexDirection: "row",
-  //   alignItems: "center",
-  //   paddingHorizontal: 18,
-  //   paddingVertical: 16,
-  //   paddingTop: 50,
-  //   backgroundColor: "#fff",
-  //   borderBottomWidth: 1,
-  //   borderBottomColor: "#e0e0e0",
-  //   shadowColor: "#000",
-  //   shadowOpacity: 0.05,
-  //   shadowOffset: { width: 0, height: 2 },
-  //   shadowRadius: 4,
-  //   elevation: 2,
-  // },
-  // backButton: {
-  //   padding: 8,
-  //   marginRight: 12,
-  // },
-  // headerContent: {
-  //   flex: 1,
-  // },
-  // headerTitle: {
-  //   fontSize: 18,
-  //   fontWeight: "700",
-  //   color: "#003366",
-  // },
+  header: {
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.xl,
+    paddingBottom: theme.spacing.lg,
+  },
+  headerTitle: {
+    ...typography.headingLg,
+    marginBottom: theme.spacing.xs,
+  },
   headerSubtitle: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 2,
+    ...typography.bodyMd,
   },
-  routesSection: {
-    paddingVertical: 16,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  sectionHeader: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#222",
-    paddingHorizontal: 18,
-    marginBottom: 12,
-  },
-  routesList: {
-    paddingHorizontal: 18,
-  },
-  routeCard: {
-    backgroundColor: "#f0f7ff",
-    padding: 16,
-    borderRadius: 12,
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: "#d0e4ff",
-    width: 160,
-  },
-  routeTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#0051a8",
-    marginBottom: 8,
-  },
-  routeInfo: {
-    gap: 6,
-  },
-  routeDetail: {
+  filterRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+    gap: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xl,
+    paddingBottom: theme.spacing.lg,
   },
-  routeSubtitle: {
-    fontSize: 13,
-    color: "#444",
+  filterChip: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.white,
   },
-  ridesSection: {
-    flex: 1,
-    paddingTop: 16,
+  filterChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
-  ridesList: {
-    paddingHorizontal: 18,
-    paddingBottom: 20,
+  filterChipText: {
+    color: theme.colors.textPrimary,
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+  },
+  filterChipTextActive: {
+    color: theme.colors.white,
+  },
+  listContent: {
+    paddingHorizontal: theme.spacing.xl,
+    paddingBottom: theme.spacing.xxxl,
+    gap: theme.spacing.md,
   },
   rideCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg,
     borderWidth: 1,
-    borderColor: "#e6e6e6",
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: theme.colors.border,
+    ...theme.shadows.card,
   },
-  rideHeader: {
+  cardTop: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    marginBottom: theme.spacing.md,
   },
-  rideTitle: {
+  avatarCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: theme.spacing.md,
+  },
+  cardTopContent: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0051a8",
   },
-  rideDetails: {
-    gap: 8,
-    marginBottom: 12,
+  routeTitle: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
   },
-  detailRow: {
+  routeSubtitle: {
+    ...typography.bodySm,
+  },
+  priceBadge: {
+    backgroundColor: theme.colors.secondary,
+    borderRadius: theme.borderRadius.full,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+  },
+  priceBadgeText: {
+    color: theme.colors.textPrimary,
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.sm,
+  },
+  routeSection: {
+    flexDirection: "row",
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+  },
+  routeDotColumn: {
+    alignItems: "center",
+    paddingTop: 6,
+  },
+  sourceDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: theme.colors.accent,
+  },
+  destinationDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: theme.colors.primary,
+  },
+  routeLine: {
+    width: 2,
+    flex: 1,
+    minHeight: 24,
+    backgroundColor: theme.colors.border,
+    marginVertical: theme.spacing.xs,
+  },
+  routeTextColumn: {
+    flex: 1,
+    gap: theme.spacing.md,
+  },
+  routePoint: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+  },
+  metaRow: {
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+    flexWrap: "wrap",
+  },
+  metaChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: theme.spacing.xs,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.full,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
-  rideSubtitle: {
-    fontSize: 14,
-    color: "#555",
+  metaText: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textPrimary,
   },
   viewButton: {
-    backgroundColor: "#0051a8",
-    paddingVertical: 12,
-    borderRadius: 8,
+    minHeight: 48,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.primary,
     alignItems: "center",
-    flexDirection: "row",
     justifyContent: "center",
-    gap: 8,
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+    ...theme.shadows.button,
   },
   viewButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 15,
+    color: theme.colors.white,
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.md,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    gap: 16,
+    gap: theme.spacing.md,
   },
   loadingText: {
-    fontSize: 16,
-    color: "#666",
-    fontWeight: "500",
+    ...typography.bodyMd,
   },
-  noRidesContainer: {
+  emptyState: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 40,
-    gap: 12,
+    paddingHorizontal: theme.spacing.xxxl,
   },
-  noRideText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
-    marginTop: 16,
+  emptyIconWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: theme.spacing.lg,
   },
-  noRideSubtext: {
-    fontSize: 14,
-    color: "#888",
+  emptyTitle: {
+    ...typography.headingMd,
+    marginBottom: theme.spacing.sm,
+  },
+  emptySubtitle: {
+    ...typography.bodyMd,
     textAlign: "center",
+    lineHeight: 22,
+    marginBottom: theme.spacing.xl,
   },
   retryButton: {
-    backgroundColor: "#0051a8",
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    marginTop: 16,
+    minHeight: 48,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing.xl,
+    alignItems: "center",
+    justifyContent: "center",
+    ...theme.shadows.button,
   },
   retryButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 15,
+    color: theme.colors.white,
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.md,
   },
 });
