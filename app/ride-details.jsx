@@ -1,4 +1,4 @@
-import { FontAwesome } from "@expo/vector-icons";
+import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { theme, typography } from "../constants/theme";
 import { getRideById } from "../services/ride-service";
 
 export default function RideDetailsScreen() {
@@ -21,20 +22,15 @@ export default function RideDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
-
-  // Extract id once to prevent re-renders
   const rideId = params.id;
 
   useEffect(() => {
-    console.log("inside results page:", { id: rideId });
-    console.log("params : ", { id: rideId });
-
     const fetchRideDetails = async () => {
       try {
         setLoading(true);
         const response = await getRideById(rideId);
         setRideDetails(response.data.data);
-      } catch (error) {
+      } catch (_error) {
         Alert.alert("Error", "Failed to fetch ride details");
         router.back();
       } finally {
@@ -42,10 +38,8 @@ export default function RideDetailsScreen() {
       }
     };
 
-    if (rideId) {
-      fetchRideDetails();
-    }
-  }, [rideId]); // Only depend on rideId, not the entire params object
+    if (rideId) fetchRideDetails();
+  }, [rideId]);
 
   useEffect(() => {
     if (rideDetails) {
@@ -63,28 +57,20 @@ export default function RideDetailsScreen() {
         }),
       ]).start();
     }
-  }, [rideDetails, fadeAnim, slideAnim]); // Add all dependencies
+  }, [rideDetails, fadeAnim, slideAnim]);
 
   const handleCall = () => {
-    if (rideDetails?.phoneNumber) {
-      Linking.openURL(`tel:${rideDetails.phoneNumber}`);
-    }
+    if (rideDetails?.phoneNumber) Linking.openURL(`tel:${rideDetails.phoneNumber}`);
   };
 
   const handleMessage = () => {
-    if (rideDetails?.phoneNumber) {
-      Linking.openURL(`sms:${rideDetails.phoneNumber}`);
-    }
-  };
-
-  const handleBack = () => {
-    router.back();
+    if (rideDetails?.phoneNumber) Linking.openURL(`sms:${rideDetails.phoneNumber}`);
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0051a8" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={styles.loadingText}>Loading ride details...</Text>
       </View>
     );
@@ -93,247 +79,265 @@ export default function RideDetailsScreen() {
   if (!rideDetails) {
     return (
       <View style={styles.errorContainer}>
-        <FontAwesome name="exclamation-circle" size={60} color="#ff6b6b" />
+        <Ionicons name="alert-circle-outline" size={60} color={theme.colors.error} />
         <Text style={styles.errorText}>Ride not found</Text>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Text style={styles.backButtonText}>Go Back</Text>
+        <TouchableOpacity style={styles.goBackButton} onPress={() => router.back()} activeOpacity={0.85}>
+          <Text style={styles.goBackText}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Animated.View
-          style={[
-            styles.content,
-            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-          ]}
-        >
-          {/* Profile Section */}
-          <View style={styles.card}>
-            <View style={styles.profileRow}>
-              {rideDetails.profilePic ? (
-                <Image source={{ uri: rideDetails.profilePic }} style={styles.avatar} />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <FontAwesome name="user" size={36} color="#0051a8" />
-                </View>
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{rideDetails.userName}</Text>
-                <Text style={styles.subText}>Driver</Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+        <View style={styles.heroCard}>
+          <View style={styles.driverRow}>
+            {rideDetails.profilePic ? (
+              <Image source={{ uri: rideDetails.profilePic }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <FontAwesome name="user" size={28} color={theme.colors.primary} />
               </View>
-            </View>
-
-            <View style={styles.actionRow}>
-              <TouchableOpacity style={styles.primaryButton} onPress={handleCall}>
-                <FontAwesome name="phone" size={16} color="#fff" />
-                <Text style={styles.primaryText}>Call</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.secondaryButton} onPress={handleMessage}>
-                <FontAwesome name="comment" size={16} color="#0051a8" />
-                <Text style={styles.secondaryText}>Message</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Route Info */}
-          <View style={styles.card}>
-            <Text style={styles.sectionHeading}>Route</Text>
-            <View style={styles.routeItem}>
-              <FontAwesome name="circle" size={10} color="#0051a8" />
-              <Text style={styles.routeText}>{rideDetails.startPoint}</Text>
-            </View>
-            <View style={styles.routeLine} />
-            <View style={styles.routeItem}>
-              <FontAwesome name="map-marker" size={14} color="#ff6b6b" />
-              <Text style={styles.routeText}>{rideDetails.destinationPoint}</Text>
-            </View>
-            {rideDetails.distanceKm && (
-              <Text style={styles.mutedText}>Distance: {rideDetails.distanceKm} km</Text>
             )}
-          </View>
-
-          {/* Schedule */}
-          <View style={styles.card}>
-            <Text style={styles.sectionHeading}>Schedule</Text>
-            <View style={styles.rowBetween}>
-              <View>
-                <Text style={styles.mutedText}>Date</Text>
-                <Text style={styles.valueText}>{rideDetails.rideDate}</Text>
-              </View>
-              <View>
-                <Text style={styles.mutedText}>Time</Text>
-                <Text style={styles.valueText}>{rideDetails.rideTime}</Text>
-              </View>
+            <View style={styles.driverMeta}>
+              <Text style={styles.driverName}>{rideDetails.userName}</Text>
+              <Text style={styles.driverRole}>Driver · Rating coming soon</Text>
+              <Text style={styles.vehicleInfo}>{rideDetails.vehicleType || "Vehicle details available on contact"}</Text>
             </View>
           </View>
+        </View>
 
-          {/* Contact */}
-          <View style={styles.card}>
-            <Text style={styles.sectionHeading}>Contact</Text>
-            <View style={styles.row}>
-              <FontAwesome name="phone" size={16} color="#0051a8" />
-              <TouchableOpacity onPress={handleCall}>
-                <Text style={styles.valueText}>{rideDetails.phoneNumber}</Text>
-              </TouchableOpacity>
-            </View>
+        <View style={styles.infoCard}>
+          <Text style={styles.sectionTitle}>Trip Overview</Text>
+          <View style={styles.infoRow}>
+            <Ionicons name="location-outline" size={18} color={theme.colors.primary} />
+            <Text style={styles.infoText}>{rideDetails.startPoint}</Text>
           </View>
-        </Animated.View>
-      </ScrollView>
+          <View style={styles.infoRow}>
+            <Ionicons name="navigate-outline" size={18} color={theme.colors.primary} />
+            <Text style={styles.infoText}>{rideDetails.destinationPoint}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Ionicons name="calendar-outline" size={18} color={theme.colors.primary} />
+            <Text style={styles.infoText}>{rideDetails.rideDate}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Ionicons name="time-outline" size={18} color={theme.colors.primary} />
+            <Text style={styles.infoText}>{rideDetails.rideTime}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Ionicons name="people-outline" size={18} color={theme.colors.primary} />
+            <Text style={styles.infoText}>{rideDetails.availableSeats || "Seats unavailable"} seats available</Text>
+          </View>
+          {rideDetails.distanceKm ? (
+            <View style={styles.infoRow}>
+              <Ionicons name="map-outline" size={18} color={theme.colors.primary} />
+              <Text style={styles.infoText}>{rideDetails.distanceKm} km away</Text>
+            </View>
+          ) : null}
+        </View>
 
-    </View>
+        <View style={styles.contactCard}>
+          <Text style={styles.sectionTitle}>Contact Driver</Text>
+          <Text style={styles.contactValue}>{rideDetails.phoneNumber}</Text>
+          <View style={styles.contactActions}>
+            <TouchableOpacity style={styles.primaryContact} onPress={handleCall} activeOpacity={0.85}>
+              <Ionicons name="call-outline" size={16} color={theme.colors.white} />
+              <Text style={styles.primaryContactText}>Call</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.secondaryContact} onPress={handleMessage} activeOpacity={0.85}>
+              <Ionicons name="chatbubble-ellipses-outline" size={16} color={theme.colors.primary} />
+              <Text style={styles.secondaryContactText}>Message</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Animated.View>
+
+      <TouchableOpacity style={styles.stickyButton} onPress={handleCall} activeOpacity={0.85}>
+        <Text style={styles.stickyButtonText}>Request This Ride</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9fafb",
+    backgroundColor: theme.colors.background,
   },
-  scrollView: { flex: 1 },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 50,
-    gap: 16,
+  content: {
+    padding: theme.spacing.xl,
+    paddingBottom: theme.spacing.xxxl,
+    gap: theme.spacing.lg,
   },
-  content: { gap: 16 },
-
-  // Cards
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: "#f0f0f0",
+  heroCard: {
+    backgroundColor: "#FFF3E8",
+    borderRadius: theme.borderRadius.xl,
+    padding: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
   },
-
-  // Profile
-  profileRow: {
+  driverRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
-    gap: 12,
   },
   avatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    borderWidth: 2,
-    borderColor: "#0051a8",
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 3,
+    borderColor: theme.colors.primary,
+    marginRight: theme.spacing.md,
   },
   avatarPlaceholder: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "#e8f1ff",
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: theme.colors.white,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: theme.spacing.md,
   },
-  name: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#002d5c",
-  },
-  subText: {
-    fontSize: 13,
-    color: "#777",
-    marginTop: 2,
-  },
-
-  // Actions
-  actionRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 8,
-  },
-  primaryButton: {
+  driverMeta: {
     flex: 1,
-    backgroundColor: "#0051a8",
-    paddingVertical: 8,
-    borderRadius: 10,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 8,
   },
-  secondaryButton: {
-    flex: 1,
+  driverName: {
+    ...typography.headingMd,
+    marginBottom: theme.spacing.xs,
+  },
+  driverRole: {
+    ...typography.bodySm,
+    marginBottom: theme.spacing.xs,
+  },
+  vehicleInfo: {
+    ...typography.bodySm,
+    color: theme.colors.textPrimary,
+  },
+  infoCard: {
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: "#0051a8",
-    // paddingVertical: 8,
-    borderRadius: 10,
+    borderColor: theme.colors.border,
+    padding: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.card,
+  },
+  contactCard: {
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: theme.spacing.xl,
+    marginBottom: theme.spacing.xl,
+    ...theme.shadows.card,
+  },
+  sectionTitle: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
+  },
+  infoRow: {
     flexDirection: "row",
+    alignItems: "flex-start",
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  infoText: {
+    flex: 1,
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+  },
+  contactValue: {
+    ...typography.bodyMd,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.lg,
+  },
+  contactActions: {
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+  },
+  primaryContact: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+    ...theme.shadows.button,
+  },
+  primaryContactText: {
+    color: theme.colors.white,
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.md,
+  },
+  secondaryContact: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: theme.borderRadius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+  },
+  secondaryContactText: {
+    color: theme.colors.primary,
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.md,
+  },
+  stickyButton: {
+    minHeight: 52,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    ...theme.shadows.button,
+  },
+  stickyButtonText: {
+    color: theme.colors.white,
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.lg,
+  },
+  loadingContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    gap: 10,
-    backgroundColor: "#f5f9ff",
+    gap: theme.spacing.md,
+    backgroundColor: theme.colors.background,
   },
-  primaryText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
+  loadingText: {
+    ...typography.bodyMd,
   },
-  secondaryText: {
-    color: "#0051a8",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-
-  // Route
-  sectionHeading: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#003366",
-    marginBottom: 10,
-  },
-  routeItem: {
-    flexDirection: "row",
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
-    gap: 10,
-    marginVertical: 4,
+    paddingHorizontal: theme.spacing.xxxl,
+    backgroundColor: theme.colors.background,
   },
-  routeLine: {
-    height: 20,
-    width: 2,
-    backgroundColor: "#e0e0e0",
-    marginLeft: 6,
+  errorText: {
+    ...typography.headingMd,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
-  routeText: {
-    fontSize: 15,
-    color: "#333",
-    fontWeight: "500",
-  },
-  mutedText: {
-    fontSize: 13,
-    color: "#777",
-    marginTop: 6,
-  },
-
-  // Schedule
-  rowBetween: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 8,
-  },
-  valueText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#002d5c",
-  },
-
-  // Contact
-  row: {
-    flexDirection: "row",
+  goBackButton: {
+    minHeight: 48,
+    borderRadius: theme.borderRadius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing.xl,
     alignItems: "center",
-    gap: 10,
-    marginTop: 8,
+    justifyContent: "center",
+  },
+  goBackText: {
+    color: theme.colors.primary,
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.md,
   },
 });

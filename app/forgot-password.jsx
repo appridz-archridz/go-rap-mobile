@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -8,24 +9,15 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
-import { AuthService, forgotPassword } from '../components/services/authService'; // Import your API function
-import { inputField } from "../global-css";
+import { AuthService, forgotPassword } from "../components/services/authService";
+import { theme, typography } from "../constants/theme";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const isEmailExists = async (email) => {
-    try {
-      const { data } = await AuthService.isEmailExists(email);
-      return { success: data?.success, message: data?.message };
-    } catch (err) {
-      return false;
-    }
-  };
 
   const handleSendOtp = async () => {
     try {
@@ -39,55 +31,41 @@ export default function ForgotPassword() {
       setLoading(true);
 
       try {
-
         await forgotPassword(email);
-        // Navigate to OTP verification page with email
         router.push({
           pathname: "/verify-otp",
           params: { email },
         });
       } catch (err) {
-        setError(
-          err.response?.data?.message ||
-          "Failed to send OTP. Please try again."
-        );
+        setError(err.response?.data?.message || "Failed to send OTP. Please try again.");
       } finally {
         setLoading(false);
       }
-    } catch (err) {
+    } catch (_err) {
       Alert.alert("User Not Found", "Email that you entered is not found. Please try again.");
-      return;
     }
   };
 
-  const handleBackToLogin = () => {
-    router.push("/login");
-  };
-
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-    >
-      {/* Back button */}
-      <TouchableOpacity style={styles.backButton} onPress={handleBackToLogin} />
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <View style={styles.iconWrap}>
+        <Ionicons name="mail-open-outline" size={38} color={theme.colors.primary} />
+      </View>
+      <Text style={styles.title}>Forgot Password?</Text>
+      <Text style={styles.subtitle}>
+        Enter your email address and we&apos;ll send you a verification code to reset your password.
+      </Text>
 
-      <View style={styles.forgotContainer}>
-        <Text style={styles.forgotTitle}>Forgot Password?</Text>
-        <Text style={styles.forgotSubtitle}>
-          No worries! Enter your email address and we will send you a verification code.
-        </Text>
-
-        {/* Email input */}
-        <View style={styles.inputContainer}>
+      <View style={styles.formCard}>
+        <Text style={styles.label}>Email address</Text>
+        <View style={styles.inputShell}>
+          <Ionicons name="mail-outline" size={18} color={theme.colors.textMuted} />
           <TextInput
-            style={inputField}
+            style={styles.input}
             placeholder="Email address"
-            placeholderTextColor="#999"
+            placeholderTextColor={theme.colors.textMuted}
             value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-            }}
+            onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -95,73 +73,111 @@ export default function ForgotPassword() {
           />
         </View>
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-        {/* Send OTP Button */}
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleSendOtp}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Send Verification Code</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.linkButton} onPress={handleBackToLogin}>
-          <Text style={styles.linkButtonText}>Back to Login</Text>
-        </TouchableOpacity>
       </View>
+
+      <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleSendOtp} disabled={loading} activeOpacity={0.85}>
+        {loading ? <ActivityIndicator color={theme.colors.white} /> : <Text style={styles.buttonText}>Send Verification Code</Text>}
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.linkButton} onPress={() => router.push("/login")} activeOpacity={0.85}>
+        <Text style={styles.linkButtonText}>Back to Login</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  contentContainer: { flexGrow: 1, justifyContent: "center", padding: 20 },
-  backButton: { position: "absolute", top: 50, left: 20, zIndex: 1, padding: 8 },
-  forgotContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
-  forgotTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#000",
-    textAlign: "center",
-    marginBottom: 12,
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
   },
-  forgotSubtitle: {
-    fontSize: 16,
-    color: "#666",
+  contentContainer: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.xxxl,
+    alignItems: "center",
+  },
+  iconWrap: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: theme.spacing.xl,
+  },
+  title: {
+    ...typography.headingLg,
+    marginBottom: theme.spacing.sm,
+  },
+  subtitle: {
+    ...typography.bodyMd,
     textAlign: "center",
-    marginBottom: 24,
     lineHeight: 22,
+    marginBottom: theme.spacing.xl,
   },
-  inputContainer: { width: "100%" },
+  formCard: {
+    width: "100%",
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.card,
+  },
+  label: {
+    ...typography.label,
+    marginBottom: theme.spacing.sm,
+  },
+  inputShell: {
+    height: 48,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.white,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.md,
+  },
+  input: {
+    flex: 1,
+    height: "100%",
+    paddingHorizontal: theme.spacing.sm,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+  },
   errorText: {
-    color: "red",
-    fontSize: 12,
-    marginTop: 6,
-    alignSelf: "flex-start",
-    marginLeft: 6,
+    color: theme.colors.error,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.xs,
+    marginTop: theme.spacing.xs,
   },
   button: {
-    height: 52,
-    backgroundColor: "#2094F3FF",
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 20,
     width: "100%",
+    minHeight: 52,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    ...theme.shadows.button,
   },
   buttonDisabled: {
-    backgroundColor: "#A0C4E8",
+    backgroundColor: "#F8B39B",
   },
   buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-    textAlign: "center",
+    color: theme.colors.white,
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.lg,
   },
-  linkButton: { marginTop: 16 },
-  linkButtonText: { color: "#0057D9", fontSize: 14, fontWeight: "600" },
+  linkButton: {
+    marginTop: theme.spacing.lg,
+  },
+  linkButtonText: {
+    color: theme.colors.primary,
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+  },
 });

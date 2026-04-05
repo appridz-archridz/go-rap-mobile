@@ -1,8 +1,8 @@
-import { Routes } from '@/components/RoutesModal';
+import { Routes } from "@/components/RoutesModal";
 import { FontAwesome } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,13 +15,14 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View
+  View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
-import { clearButton, inputField, inputWithCross } from "../../global-css";
 import { olaService } from "../../services/thirdPartyApis";
-import { getRideById, RideService } from './../../services/ride-service';
-import { getUserVehicles } from './../../services/vehicle-service';
+import { getRideById, RideService } from "../../services/ride-service";
+import { getUserVehicles } from "../../services/vehicle-service";
+import { theme } from "../../constants/theme";
 
 const CreateRideScreen = () => {
   const [source, setSource] = useState("");
@@ -30,7 +31,6 @@ const CreateRideScreen = () => {
   const [destinationSuggestions, setDestinationSuggestions] = useState([]);
   const [selectedSource, setSelectedSource] = useState(null);
   const [selectedDestination, setSelectedDestination] = useState(null);
-  const [routes, setRoutes] = useState([]);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [rideDate, setRideDate] = useState(new Date());
   const [rideTime, setRideTime] = useState(new Date());
@@ -41,113 +41,72 @@ const CreateRideScreen = () => {
   const [showSourceSuggestions, setShowSourceSuggestions] = useState(false);
   const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
   const [isCreatingRide, setIsCreatingRide] = useState(false);
-  const [path, setPath] = useState('');
-  const [pageTitle, setPageTitle] = useState('Create Ride');
-
-  // Vehicle related states
+  const [pageTitle, setPageTitle] = useState("Create Ride");
   const [vehicles, setVehicles] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const [showVehicleDropdown, setShowVehicleDropdown] = useState(false);
   const [loadingVehicles, setLoadingVehicles] = useState(true);
 
   const sourceDebounceRef = useRef(null);
   const destinationDebounceRef = useRef(null);
-
   const selector = useSelector((state) => state.auth);
+  const [rideId] = useState(useLocalSearchParams()?.rideId || null);
 
-  const [rideId, setRideId] = useState(useLocalSearchParams()?.rideId || null);
-
-  // Fetch user vehicles on component mount
-  useEffect(() => {
-    fetchUserVehicles();
-  }, []);
-
-  useEffect(() => {
-    if (rideId) {
-      setPageTitle('Update Ride');
-      fetchRideDetails();
-    }
-  }, [rideId]);
-
-  const fetchRideDetails = async () => {
+  const fetchRideDetails = useCallback(async () => {
     try {
       const res = await getRideById(rideId);
       const ride = res.data?.data;
-
       if (!ride) return;
 
-      console.log("Ride details:", ride);
-
-      // -------------------  Set basic fields  --------------------
       setSource(ride.startPoint || "");
       setDestination(ride.destinationPoint || "");
-
       setSelectedSource({
         description: ride.startPoint,
-        geometry: { location: { lat: ride.startLatitude, lng: ride.startLongitude } }
+        geometry: { location: { lat: ride.startLatitude, lng: ride.startLongitude } },
       });
-
       setSelectedDestination({
         description: ride.destinationPoint,
-        geometry: { location: { lat: ride.destinationLatitude, lng: ride.destinationLongitude } }
+        geometry: { location: { lat: ride.destinationLatitude, lng: ride.destinationLongitude } },
       });
 
-      // -------------------  Set Date  --------------------
-      const d = new Date(ride.rideDate);
-      if (!isNaN(d)) setRideDate(d);
+      const dateValue = new Date(ride.rideDate);
+      if (!Number.isNaN(dateValue.getTime())) setRideDate(dateValue);
 
-      // -------------------  Set Time  --------------------
-      const [hr, min, sec] = ride.rideTime.split(":").map(n => parseInt(n));
-      const t = new Date();
-      t.setHours(hr, min, sec || 0);
-      setRideTime(new Date(t));
+      const [hr, min, sec] = ride.rideTime.split(":").map((n) => parseInt(n, 10));
+      const timeValue = new Date();
+      timeValue.setHours(hr, min, sec || 0);
+      setRideTime(new Date(timeValue));
 
-      // -------------------  Seats (default fallback)  --------------------
       setSlots(ride.availableSeats || 1);
 
-      // -------------------  Vehicle preload  --------------------
-      const matchedVehicle = vehicles.find(v => v.id === ride.vehicleId);
-
+      const matchedVehicle = vehicles.find((vehicle) => vehicle.id === ride.vehicleId);
       if (matchedVehicle) {
         setSelectedVehicle(matchedVehicle);
       } else {
-        // vehicle not in list → still display placeholder
         setSelectedVehicle({
           id: ride.vehicleId,
           vehicleType: ride.vehicleType,
-          vehicleNumber: ride.vehicleNumber
+          vehicleNumber: ride.vehicleNumber,
         });
       }
 
-      // -------------------  Pre-fill route polyline if available  --------------------
       if (ride.polyline) {
         setSelectedRoute(ride.polyline);
-        setPath(ride.polyline);
       }
-
-      // Set page title
-      setPageTitle("Update Ride");
-
     } catch (error) {
       console.error("Error fetching ride details:", error);
     }
-  };
+  }, [rideId, vehicles]);
 
-  const fetchUserVehicles = async () => {
+  const fetchUserVehicles = useCallback(async () => {
     try {
       setLoadingVehicles(true);
       const { data } = await getUserVehicles(selector.userId);
 
       if (data.data.length > 0) {
         setVehicles(data.data);
-
-        if (selectedVehicle && selectedVehicle.id) {
-          const matched = data.data.find(v => String(v.id) === String(selectedVehicle.id));
-          if (matched) {
-            setSelectedVehicle(matched);
-          } else {
-            setSelectedVehicle(data.data[0]);
-          }
+        if (selectedVehicle?.id) {
+          const matched = data.data.find((vehicle) => String(vehicle.id) === String(selectedVehicle.id));
+          setSelectedVehicle(matched || data.data[0]);
         } else {
           setSelectedVehicle(data.data[0]);
         }
@@ -157,32 +116,35 @@ const CreateRideScreen = () => {
           "You need to add at least one vehicle to create a ride. Would you like to add a vehicle now?",
           [
             { text: "Cancel", style: "cancel" },
-            {
-              text: "Add Vehicle",
-              onPress: () => router.push("/vehicle-information")
-            }
+            { text: "Add Vehicle", onPress: () => router.push("/vehicle-information") },
           ]
         );
       }
-    } catch (error) {
-      console.error("Error fetching vehicles:", error);
+    } catch (_error) {
       Alert.alert(
         "Error",
         "Failed to fetch your vehicles. Please try again or add a vehicle.",
         [
           { text: "Cancel", style: "cancel" },
-          {
-            text: "Add Vehicle",
-            onPress: () => router.push("/vehicle-information")
-          }
+          { text: "Add Vehicle", onPress: () => router.push("/vehicle-information") },
         ]
       );
     } finally {
       setLoadingVehicles(false);
     }
-  };
+  }, [selectedVehicle?.id, selector.userId]);
 
-  // Handle source input change
+  useEffect(() => {
+    fetchUserVehicles();
+  }, [fetchUserVehicles]);
+
+  useEffect(() => {
+    if (rideId) {
+      setPageTitle("Update Ride");
+      fetchRideDetails();
+    }
+  }, [fetchRideDetails, rideId]);
+
   const handleSourceChange = (text) => {
     setSource(text);
     setSelectedSource(null);
@@ -193,7 +155,7 @@ const CreateRideScreen = () => {
           const results = await olaService.search(text);
           setSourceSuggestions(results);
           setShowSourceSuggestions(true);
-        } catch { }
+        } catch {}
       } else {
         setSourceSuggestions([]);
         setShowSourceSuggestions(false);
@@ -211,7 +173,7 @@ const CreateRideScreen = () => {
           const results = await olaService.search(text);
           setDestinationSuggestions(results);
           setShowDestinationSuggestions(true);
-        } catch { }
+        } catch {}
       } else {
         setDestinationSuggestions([]);
         setShowDestinationSuggestions(false);
@@ -234,117 +196,83 @@ const CreateRideScreen = () => {
       const from = selectedSource.geometry.location || selectedSource;
       const to = selectedDestination.geometry.location || selectedDestination;
       const res = await olaService.getRoute(from, to);
-      setRoutes(res || []);
       Routes.show({
         encodedRoute: res[0].overview_polyline,
-        from: from,
-        to: to,
+        from,
+        to,
         onConfirm: (coords) => {
-          setPath(coords);
           setSelectedRoute(coords);
           Routes.hide();
         },
       });
     } catch {
       Alert.alert("Error", "Failed to fetch routes");
-    } finally {
     }
   };
 
   useEffect(() => {
-    if (selectedRoute) {
-      handleCreateRide();
-    }
+    if (selectedRoute) handleCreateRide();
   }, [selectedRoute]);
 
-  const createPayload = () => {
-    const payload = {
-      startPoint: selectedSource.description,
-      startLatitude: selectedSource.geometry.location.lat,
-      startLongitude: selectedSource.geometry.location.lng,
+  const createPayload = useCallback(() => ({
+    startPoint: selectedSource.description,
+    startLatitude: selectedSource.geometry.location.lat,
+    startLongitude: selectedSource.geometry.location.lng,
+    destinationPoint: selectedDestination.description,
+    destinationLatitude: selectedDestination.geometry.location.lat,
+    destinationLongitude: selectedDestination.geometry.location.lng,
+    rideDate: rideDate.toISOString().split("T")[0],
+    rideTime: rideTime.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }),
+    availableSeats: slots || 1,
+    polyline: selectedRoute,
+    vehicleId: selectedVehicle.id,
+    vehicleType: selectedVehicle.vehicleType || "Car",
+  }), [rideDate, rideTime, selectedDestination, selectedRoute, selectedSource, selectedVehicle, slots]);
 
-      destinationPoint: selectedDestination.description,
-      destinationLatitude: selectedDestination.geometry.location.lat,
-      destinationLongitude: selectedDestination.geometry.location.lng,
-
-      rideDate: rideDate.toISOString().split("T")[0],
-      rideTime: rideTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }),
-
-      availableSeats: slots || 1,
-      polyline: selectedRoute,
-      vehicleId: selectedVehicle.id,
-      vehicleType: selectedVehicle.vehicleType || "Car", // Fallback to "Car" if vehicleType not available
-    };
-    return payload;
-  }
-
-  const createRide = async () => {
+  const createRide = useCallback(async () => {
     try {
       const payload = createPayload();
       const { data } = await RideService.createRide(selector.userId, payload);
-      
-
-      
-      if (data.statusCode == 201) {
+      if (data.statusCode === 201) {
         Alert.alert("Success", "Ride created successfully!");
         router.push("/search-ride");
+      } else {
+        Alert.alert("Error", data.message || "Something went wrong");
       }
-      else Alert.alert("Error", data.message || "Something went wrong");
-    } catch (error) {
-      console.error("Error creating ride:", error);
+    } catch (_error) {
       Alert.alert("Error", "Failed to { pageTitle } ");
     } finally {
       setLoading(false);
     }
-  };
+  }, [createPayload, selector.userId]);
 
-  const reset = () => {
-    setSource("");
-    setDestination("");
-    setSelectedSource(null);
-    setSelectedDestination(null);
-    setSelectedRoute(null);
-    setPath([]);
-    setRideDate(new Date());
-    setRideTime(new Date());
-    setSlots(1);
-    setShowSourceSuggestions(false);
-    setShowDestinationSuggestions(false);
-    setRoutes([]);
-    setIsCreatingRide(false);
-    setSelectedVehicle(null);
-    setShowVehicleDropdown(false);
-    setVehicles([]);
-    setLoadingVehicles(true);
-
-  }
-
-  const updateRide = async () => {
+  const updateRide = useCallback(async () => {
     try {
       const payload = createPayload();
       const { data } = await RideService.updateRide(rideId, payload);
-
-     // reset();
-     console.log("response",data)
-      if (data.statusCode == 200) {
+      if (data.statusCode === 200) {
         Alert.alert("Success", "Ride Updated successfully!");
         router.push("/search-ride");
+      } else {
+        Alert.alert("Error", data.message || "Something went wrong");
       }
-      else Alert.alert("Error", data.message || "Something went wrong");
-    } catch (error) {
-      console.error("Error creating ride:", error);
+    } catch (_error) {
       Alert.alert("Error", "Failed to  { pageTitle } ");
     } finally {
       setLoading(false);
     }
-  }
+  }, [createPayload, rideId]);
 
   useEffect(() => {
     if (selectedRoute && isCreatingRide && selectedSource && selectedDestination) {
       if (rideId) updateRide();
       else createRide();
     }
-  }, [isCreatingRide, selectedRoute]);
+  }, [createRide, isCreatingRide, rideId, selectedDestination, selectedRoute, selectedSource, updateRide]);
 
   const handleCreateRide = async () => {
     setIsCreatingRide(true);
@@ -366,274 +294,501 @@ const CreateRideScreen = () => {
           setShowDestinationSuggestions(false);
         }
       }}
-    >
-      <Text style={styles.suggestionMain}>{item.structured_formatting?.main_text || item.description}</Text>
-      {item.structured_formatting?.secondary_text && (
-        <Text style={styles.suggestionSecondary}>{item.structured_formatting.secondary_text}</Text>
-      )}
-    </TouchableOpacity>
-  );
-
-  const renderVehicleItem = (vehicle) => (
-    <TouchableOpacity
-      key={vehicle.id}
-      style={styles.dropdownItem}
-      onPress={() => {
-        setSelectedVehicle(vehicle);
-        setShowVehicleDropdown(false);
-      }}
+      activeOpacity={0.85}
     >
       <Text style={styles.suggestionMain}>
-        {vehicle.vehicleType || "Vehicle"} - {vehicle.vehicleNumber}
+        {item.structured_formatting?.main_text || item.description}
       </Text>
-      {vehicle.dlNumber && (
+      {item.structured_formatting?.secondary_text ? (
         <Text style={styles.suggestionSecondary}>
-          DL: {vehicle.dlNumber}
+          {item.structured_formatting.secondary_text}
         </Text>
-      )}
+      ) : null}
     </TouchableOpacity>
   );
 
   if (loadingVehicles) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', flex: 1 }]}>
-        <ActivityIndicator size="large" color="#0051a8" />
-        <Text style={{ marginTop: 10, color: '#666' }}>Loading vehicles...</Text>
-      </View>
+      <SafeAreaView style={styles.loaderScreen}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text style={styles.loaderText}>Loading vehicles...</Text>
+      </SafeAreaView>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1, backgroundColor: "#f8fafc" }}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}> {pageTitle} </Text>
-
-          {/* Vehicle Selection */}
-          <View style={{ marginBottom: 15, zIndex: 3000 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={styles.label}>Select Vehicle</Text>
-              <TouchableOpacity onPress={() => router.push("/vehicle-information")}>
-                <Text style={styles.addVehicleLink}>+ Add Vehicle</Text>
-              </TouchableOpacity>
+    <SafeAreaView style={styles.screen}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.screen}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            <View style={styles.headerCard}>
+              <Text style={styles.eyebrow}>Driver trip setup</Text>
+              <Text style={styles.title}>{pageTitle}</Text>
+              <Text style={styles.subtitle}>
+                Choose a vehicle, add the route, and publish seats for riders nearby.
+              </Text>
             </View>
 
-            <TouchableOpacity
-              style={[styles.dateField, !selectedVehicle && styles.placeholderField]}
-              onPress={() => setShowVehicleDropdown(!showVehicleDropdown)}
-            >
-              <Text style={[styles.dateText, !selectedVehicle && styles.placeholderText]}>
-                {selectedVehicle
-                  ? `${selectedVehicle.vehicleType || "Vehicle"} - ${selectedVehicle.vehicleNumber}`
-                  : "Select a vehicle"
-                }
-              </Text>
-              <FontAwesome
-                name={showVehicleDropdown ? "chevron-up" : "chevron-down"}
-                size={16}
-                color="#0051a8"
-              />
-            </TouchableOpacity>
-
-            {showVehicleDropdown && vehicles.length > 0 && (
-              <View style={styles.dropdown}>
-                <ScrollView style={{ maxHeight: 200 }}>
-                  {vehicles.map(renderVehicleItem)}
-                </ScrollView>
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionLabel}>Vehicle</Text>
+                <TouchableOpacity onPress={() => router.push("/vehicle-information?returnTo=create-ride")} activeOpacity={0.85}>
+                  <Text style={styles.addLink}>+ Add vehicle</Text>
+                </TouchableOpacity>
               </View>
-            )}
-          </View>
-
-          {/* Source */}
-          <View style={{ marginBottom: 15, zIndex: 2000 }}>
-            <Text style={styles.label}>Source</Text>
-            <View style={inputWithCross}>
-              <TextInput placeholderTextColor={'#999'}
-                style={inputField}
-                placeholder="Enter Source"
-                value={source}
-                onChangeText={handleSourceChange}
-              />
-              {source.length > 0 && (
-                <TouchableOpacity onPress={() => { setSource(""); setSelectedSource(null); setShowSourceSuggestions(false); }} style={clearButton}>
-                  <FontAwesome name="times-circle" size={20} color="#999" />
-                </TouchableOpacity>
-              )}
-            </View>
-            {showSourceSuggestions && (
-              <ScrollView style={styles.dropdown}>
-                {sourceSuggestions.map((item, i) => (
-                  <View key={item.place_id || i.toString()}>
-                    {renderSuggestion(item, "source")}
-                  </View>
-                ))}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.vehicleRow}>
+                {vehicles.map((vehicle) => {
+                  const selected = String(selectedVehicle?.id) === String(vehicle.id);
+                  return (
+                    <TouchableOpacity
+                      key={vehicle.id}
+                      style={[styles.vehicleCard, selected ? styles.vehicleCardActive : null]}
+                      onPress={() => setSelectedVehicle(vehicle)}
+                      activeOpacity={0.85}
+                    >
+                      <View style={[styles.vehicleIconWrap, selected ? styles.vehicleIconWrapActive : null]}>
+                        <FontAwesome
+                          name={vehicle.vehicleType?.toLowerCase() === "bike" ? "motorcycle" : "car"}
+                          size={18}
+                          color={selected ? theme.colors.primary : theme.colors.textSecondary}
+                        />
+                      </View>
+                      <Text style={styles.vehicleType}>{vehicle.vehicleType || "Vehicle"}</Text>
+                      <Text style={styles.vehicleNumber}>{vehicle.vehicleNumber}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
-            )}
-          </View>
-
-          {/* Destination */}
-          <View style={{ marginBottom: 15, zIndex: 1000 }}>
-            <Text style={styles.label}>Destination</Text>
-            <View style={inputWithCross}>
-              <TextInput placeholderTextColor={'#999'}
-                style={inputField}
-                placeholder="Enter Destination"
-                value={destination}
-                onChangeText={handleDestinationChange}
-              />
-              {destination.length > 0 && (
-                <TouchableOpacity onPress={() => { setDestination(""); setSelectedDestination(null); setShowDestinationSuggestions(false); }} style={clearButton}>
-                  <FontAwesome name="times-circle" size={20} color="#999" />
-                </TouchableOpacity>
-              )}
             </View>
-            {showDestinationSuggestions && (
-              <ScrollView style={styles.dropdown}>
-                {destinationSuggestions.map((item, i) => (
-                  <View key={item.place_id || i.toString()}>
-                    {renderSuggestion(item, "destination")}
+
+            <View style={[styles.sectionCard, showSourceSuggestions || showDestinationSuggestions ? styles.expandedSection : null]}>
+              <Text style={styles.sectionLabel}>Route</Text>
+              <View style={styles.inputShell}>
+                <View style={styles.routeColumn}>
+                  <View style={[styles.routeDot, styles.routeDotStart]} />
+                  <View style={styles.routeStem} />
+                  <View style={[styles.routeDot, styles.routeDotEnd]} />
+                </View>
+                <View style={styles.routeInputColumn}>
+                  <View>
+                    <TextInput
+                      placeholderTextColor={theme.colors.textMuted}
+                      style={styles.input}
+                      placeholder="Enter source"
+                      value={source}
+                      onChangeText={handleSourceChange}
+                    />
+                    {source.length > 0 ? (
+                      <TouchableOpacity
+                        onPress={() => {
+                          setSource("");
+                          setSelectedSource(null);
+                          setShowSourceSuggestions(false);
+                        }}
+                        style={styles.clearButton}
+                      >
+                        <FontAwesome name="times-circle" size={18} color={theme.colors.textMuted} />
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
-                ))}
-              </ScrollView>
-            )}
-          </View>
+                  <View style={styles.inputDivider} />
+                  <View>
+                    <TextInput
+                      placeholderTextColor={theme.colors.textMuted}
+                      style={styles.input}
+                      placeholder="Enter destination"
+                      value={destination}
+                      onChangeText={handleDestinationChange}
+                    />
+                    {destination.length > 0 ? (
+                      <TouchableOpacity
+                        onPress={() => {
+                          setDestination("");
+                          setSelectedDestination(null);
+                          setShowDestinationSuggestions(false);
+                        }}
+                        style={styles.clearButton}
+                      >
+                        <FontAwesome name="times-circle" size={18} color={theme.colors.textMuted} />
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                </View>
+              </View>
 
-          {/* Ride Date */}
-          <View style={{ marginBottom: 15 }}>
-            <Text style={styles.label}>Ride Date</Text>
-            <TouchableOpacity style={styles.dateField} onPress={() => setShowDatePicker(true)}>
-              <Text style={styles.dateText}>{rideDate.toDateString()}</Text>
-              <FontAwesome name="calendar" size={20} color="#0051a8" />
-            </TouchableOpacity>
-          </View>
+              {showSourceSuggestions ? (
+                <ScrollView style={styles.dropdown} nestedScrollEnabled>
+                  {sourceSuggestions.map((item, index) => (
+                    <View key={item.place_id || index}>{renderSuggestion(item, "source")}</View>
+                  ))}
+                </ScrollView>
+              ) : null}
 
-          {/* Ride Time */}
-          <View style={{ marginBottom: 15 }}>
-            <Text style={styles.label}>Ride Time</Text>
-            <TouchableOpacity style={styles.dateField} onPress={() => setShowTimePicker(true)}>
-              <Text style={styles.dateText}>{rideTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</Text>
-              <FontAwesome name="clock-o" size={20} color="#0051a8" />
-            </TouchableOpacity>
-          </View>
+              {showDestinationSuggestions ? (
+                <ScrollView style={styles.dropdownBottom} nestedScrollEnabled>
+                  {destinationSuggestions.map((item, index) => (
+                    <View key={item.place_id || index}>{renderSuggestion(item, "destination")}</View>
+                  ))}
+                </ScrollView>
+              ) : null}
+            </View>
 
-          {/* Slots */}
-          <View style={{ marginBottom: 15 }}>
-            <Text style={styles.label}>Available Slots</Text>
-            <View style={styles.slotContainer}>
-              <TouchableOpacity onPress={() => setSlots(prev => Math.max(1, prev - 1))} style={styles.iconBtn}>
-                <FontAwesome name="minus" size={25} color="#fff" />
-              </TouchableOpacity>
-              <Text style={[styles.slotText, { fontSize: 18, fontWeight: "bold", color: "#000" }]}>
-                {slots}
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionLabel}>Schedule</Text>
+              <View style={styles.scheduleRow}>
+                <TouchableOpacity style={styles.chip} onPress={() => setShowDatePicker(true)} activeOpacity={0.85}>
+                  <FontAwesome name="calendar" size={16} color={theme.colors.primary} />
+                  <Text style={styles.chipText}>{rideDate.toDateString()}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.chip} onPress={() => setShowTimePicker(true)} activeOpacity={0.85}>
+                  <FontAwesome name="clock-o" size={16} color={theme.colors.primary} />
+                  <Text style={styles.chipText}>
+                    {rideTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionLabel}>Available seats</Text>
+              <View style={styles.stepper}>
+                <TouchableOpacity style={styles.stepperButton} onPress={() => setSlots((prev) => Math.max(1, prev - 1))} activeOpacity={0.85}>
+                  <FontAwesome name="minus" size={16} color={theme.colors.primary} />
+                </TouchableOpacity>
+                <View style={styles.stepperValue}>
+                  <Text style={styles.stepperNumber}>{slots}</Text>
+                  <Text style={styles.stepperCaption}>seats</Text>
+                </View>
+                <TouchableOpacity style={styles.stepperButton} onPress={() => setSlots((prev) => prev + 1)} activeOpacity={0.85}>
+                  <FontAwesome name="plus" size={16} color={theme.colors.primary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.routeHint}>
+              <FontAwesome name="map-o" size={16} color={theme.colors.primary} />
+              <Text style={styles.routeHintText}>
+                After tapping publish, you can confirm the route preview before the ride goes live.
               </Text>
-              <TouchableOpacity onPress={() => setSlots(prev => prev + 1)} style={styles.iconBtn}>
-                <FontAwesome name="plus" size={25} color="#fff" />
-              </TouchableOpacity>
             </View>
-          </View>
 
-          {/*  { pageTitle }  */}
-          <TouchableOpacity style={styles.submitBtn} onPress={fetchRoutes} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}> {pageTitle} </Text>}
-          </TouchableOpacity>
+            <View style={styles.bottomPad} />
 
-          {/* Date/Time Pickers */}
-          {showDatePicker && (
-            <DateTimePicker
-              value={rideDate}
-              mode="date"
-              display="default"
-              onChange={(e, selected) => {
-                setShowDatePicker(false);
-                if (selected) setRideDate(selected);
-              }}
-            />
-          )}
-          {showTimePicker && (
-            <DateTimePicker
-              value={rideTime}
-              mode="time"
-              display="default"
-              onChange={(e, selected) => {
-                setShowTimePicker(false);
-                if (selected) setRideTime(selected);
-              }}
-            />
-          )}
-        </ScrollView>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+            {showDatePicker ? (
+              <DateTimePicker
+                value={rideDate}
+                mode="date"
+                display="default"
+                onChange={(event, selected) => {
+                  setShowDatePicker(false);
+                  if (selected) setRideDate(selected);
+                }}
+              />
+            ) : null}
+
+            {showTimePicker ? (
+              <DateTimePicker
+                value={rideTime}
+                mode="time"
+                display="default"
+                onChange={(event, selected) => {
+                  setShowTimePicker(false);
+                  if (selected) setRideTime(selected);
+                }}
+              />
+            ) : null}
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+
+      <View style={styles.stickyFooter}>
+        <TouchableOpacity style={styles.submitBtn} onPress={fetchRoutes} disabled={loading} activeOpacity={0.85}>
+          {loading ? <ActivityIndicator color={theme.colors.white} /> : <Text style={styles.submitText}>{pageTitle}</Text>}
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 };
 
-export default CreateRideScreen;
-
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingBottom: 40 },
-  title: { fontSize: 26, fontWeight: "bold", color: "#003366", textAlign: "center", marginBottom: 20 },
-  label: { fontSize: 15, fontWeight: "600", color: "#333", marginBottom: 5 },
-  dateField: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  screen: { flex: 1, backgroundColor: theme.colors.background },
+  loaderScreen: {
+    flex: 1,
     alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.background,
+  },
+  loaderText: {
+    marginTop: theme.spacing.md,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textSecondary,
+  },
+  content: {
+    padding: theme.spacing.xl,
+    paddingBottom: theme.spacing.xxl,
+  },
+  headerCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.xl,
+    padding: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
+  },
+  eyebrow: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.primary,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: theme.spacing.sm,
+  },
+  title: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.xxxl,
+    color: theme.colors.textPrimary,
+  },
+  subtitle: {
+    marginTop: theme.spacing.sm,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.md,
+    lineHeight: 22,
+    color: theme.colors.textSecondary,
+  },
+  sectionCard: {
+    backgroundColor: theme.colors.white,
     borderWidth: 1,
-    borderColor: "#ECEBF0",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 12,
-    backgroundColor: "#fff",
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.card,
   },
-  placeholderField: {
-    backgroundColor: "#f8f9fa",
-  },
-  dateText: { fontSize: 15, color: "#000" },
-  placeholderText: { color: "#999" },
-  slotContainer: {
+  expandedSection: { marginBottom: 240 },
+  sectionHeader: {
     flexDirection: "row",
-    alignItems: "center",
-    borderColor: "#ECEBF0",
-    borderRadius: 10,
-    padding: 8,
-    width: "100%",
     justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: theme.spacing.md,
   },
-  iconBtn: { backgroundColor: "#2c73beff", padding: 8, borderRadius: 100, height: 40, width: 40, alignItems: "center", justifyContent: "center" },
-  slotText: { fontSize: 16, fontWeight: "600", color: "#000", marginHorizontal: 12 },
-  fetchBtn: { backgroundColor: "#0051a8", borderRadius: 10, paddingVertical: 12, marginTop: 10, alignItems: "center" },
-  fetchText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  routeCard: { backgroundColor: "#fff", borderRadius: 12, padding: 15, borderWidth: 1, borderColor: "#ddd", marginBottom: 10 },
-  selectedRoute: { borderColor: "#0051a8", borderWidth: 2 },
-  routeTitle: { fontSize: 16, fontWeight: "600", color: "#003366" },
-  routeInfo: { fontSize: 13, color: "#555", marginTop: 4 },
-  submitBtn: { backgroundColor: "#0051a8", borderRadius: 10, paddingVertical: 14, alignItems: "center", marginTop: 15, marginBottom: 25 },
-  submitText: { color: "#fff", fontSize: 17, fontWeight: "700" },
+  sectionLabel: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  addLink: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.primary,
+  },
+  vehicleRow: { gap: theme.spacing.md },
+  vehicleCard: {
+    width: 136,
+    padding: theme.spacing.lg,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  vehicleCardActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: "#FFF3E8",
+  },
+  vehicleIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: theme.spacing.md,
+  },
+  vehicleIconWrapActive: { backgroundColor: theme.colors.white },
+  vehicleType: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+  },
+  vehicleNumber: {
+    marginTop: theme.spacing.xs,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+  },
+  inputShell: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.lg,
+    backgroundColor: theme.colors.white,
+    overflow: "hidden",
+  },
+  routeColumn: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: theme.spacing.md,
+  },
+  routeDot: {
+    width: 10,
+    height: 10,
+    borderRadius: theme.borderRadius.full,
+  },
+  routeDotStart: { backgroundColor: theme.colors.accent },
+  routeDotEnd: { backgroundColor: theme.colors.primary },
+  routeStem: {
+    width: 2,
+    flex: 1,
+    minHeight: 20,
+    backgroundColor: theme.colors.border,
+    marginVertical: theme.spacing.sm,
+  },
+  routeInputColumn: { flex: 1 },
+  input: {
+    minHeight: 52,
+    paddingHorizontal: theme.spacing.lg,
+    paddingRight: 40,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+  },
+  inputDivider: { height: 1, backgroundColor: theme.colors.border },
+  clearButton: {
+    position: "absolute",
+    right: theme.spacing.lg,
+    top: 16,
+  },
   dropdown: {
     position: "absolute",
-    top: "100%",
-    left: 0,
-    right: 0,
-    backgroundColor: "#fff",
+    top: 112,
+    left: theme.spacing.lg,
+    right: theme.spacing.lg,
+    maxHeight: 180,
+    backgroundColor: theme.colors.white,
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    marginTop: 4,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 3,
-    zIndex: 1000,
-    maxHeight: 300,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.lg,
+    zIndex: 40,
+    ...theme.shadows.card,
   },
-  dropdownItem: { padding: 10, borderBottomWidth: 1, borderBottomColor: "#eee" },
-  suggestionMain: { fontSize: 14, fontWeight: "600", color: "#333" },
-  suggestionSecondary: { fontSize: 12, color: "#666", marginTop: 2 },
-  addVehicleLink: {
-    fontSize: 14,
-    color: "#0051a8",
-    fontWeight: "600",
+  dropdownBottom: {
+    position: "absolute",
+    top: 166,
+    left: theme.spacing.lg,
+    right: theme.spacing.lg,
+    maxHeight: 180,
+    backgroundColor: theme.colors.white,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.lg,
+    zIndex: 40,
+    ...theme.shadows.card,
+  },
+  dropdownItem: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  suggestionMain: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+  },
+  suggestionSecondary: {
+    marginTop: 2,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+  },
+  scheduleRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.md,
+  },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  chipText: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textPrimary,
+  },
+  stepper: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+  },
+  stepperButton: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.white,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepperValue: { alignItems: "center" },
+  stepperNumber: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.xxl,
+    color: theme.colors.textPrimary,
+  },
+  stepperCaption: {
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+  },
+  routeHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.lg,
+    backgroundColor: theme.colors.skyBlue,
+  },
+  routeHintText: {
+    flex: 1,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+    lineHeight: 20,
+  },
+  bottomPad: { height: 96 },
+  stickyFooter: {
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    backgroundColor: theme.colors.white,
+  },
+  submitBtn: {
+    minHeight: 54,
+    borderRadius: theme.borderRadius.full,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primary,
+    ...theme.shadows.button,
+  },
+  submitText: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.white,
   },
 });
+
+export default CreateRideScreen;

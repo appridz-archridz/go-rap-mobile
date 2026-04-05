@@ -1,38 +1,40 @@
+import { theme } from "./constants/theme";
+
 export const inputField = {
   width: "100%",
-  borderBottomColor: "#ECEBF0",
+  borderColor: theme.colors.border,
   borderWidth: 1,
-  borderRadius: 8,
+  borderRadius: theme.borderRadius.md,
   height: 48,
-  fontSize: 16,
-  paddingVertical: 8,
-  paddingHorizontal: 16,
+  fontSize: theme.fontSizes.md,
+  color: theme.colors.textPrimary,
+  backgroundColor: theme.colors.white,
+  paddingVertical: theme.spacing.sm,
+  paddingHorizontal: theme.spacing.lg,
   paddingRight: 32,
+  fontFamily: "work-sans-regular",
 };
 
 export const defaultButton = {
-  height: 52,
-  backgroundColor: "#2094F3FF",
-  paddingVertical: 12,
-  borderRadius: 10,
-  padding: 10,
-  fontFamily: "work-sans-bold",
-  color: "#fff",
-  fontSize: 20,
-  textAlign: "center",
+  minHeight: 52,
+  backgroundColor: theme.colors.primary,
+  paddingVertical: theme.spacing.md,
+  borderRadius: theme.borderRadius.full,
+  paddingHorizontal: theme.spacing.xl,
   width: "100%",
   justifyContent: "center",
   alignItems: "center",
   flexDirection: "row",
-  gap: 5,
+  gap: theme.spacing.sm,
+  ...theme.shadows.button,
 };
 
 export const clearButton = {
   position: "absolute",
-  right: 10,
-  top: 15,
+  right: theme.spacing.md,
+  top: 14,
 };
 
 export const inputWithCross = {
-  position: 'relative'
+  position: "relative",
 };

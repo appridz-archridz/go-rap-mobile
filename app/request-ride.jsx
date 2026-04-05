@@ -1,58 +1,53 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  View,
-  TextInput,
-  Text,
-  TouchableOpacity,
-  Keyboard,
-  Modal,
   ActivityIndicator,
   Alert,
+  Keyboard,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { olaService } from "../services/thirdPartyApis";
-import { requestRideService } from "../services/request-ride-service";
 import { useSelector } from "react-redux";
 import { router, useLocalSearchParams } from "expo-router";
+import { olaService } from "../services/thirdPartyApis";
+import { requestRideService } from "../services/request-ride-service";
+import { theme } from "../constants/theme";
 
 const RequestRideForm = ({ navigation }) => {
   const [source, setSource] = useState("");
   const [destination, setDestination] = useState("");
   const [selectedSource, setSelectedSource] = useState(null);
   const [selectedDestination, setSelectedDestination] = useState(null);
-
   const [rideDate, setRideDate] = useState(new Date());
   const [rideTime, setRideTime] = useState(new Date());
   const [passengers, setPassengers] = useState(1);
   const [fare, setFare] = useState("");
   const [notes, setNotes] = useState("");
-  const selector = useSelector((state) => state.auth);
-
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-
   const [sourceSuggestions, setSourceSuggestions] = useState([]);
   const [destSuggestions, setDestSuggestions] = useState([]);
   const [showSourceSuggestions, setShowSourceSuggestions] = useState(false);
   const [showDestSuggestions, setShowDestSuggestions] = useState(false);
-
   const [sourceLoading, setSourceLoading] = useState(false);
   const [destLoading, setDestLoading] = useState(false);
   const [sourceError, setSourceError] = useState(false);
   const [destError, setDestError] = useState(false);
-
   const [modalVisible, setModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [modalType, setModalType] = useState("success");
-
   const [routes, setRoutes] = useState(null);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
 
+  const selector = useSelector((state) => state.auth);
   const sourceDebounceRef = useRef(null);
   const destinationDebounceRef = useRef(null);
   const { id } = useLocalSearchParams();
@@ -60,8 +55,7 @@ const RequestRideForm = ({ navigation }) => {
   useEffect(() => {
     return () => {
       if (sourceDebounceRef.current) clearTimeout(sourceDebounceRef.current);
-      if (destinationDebounceRef.current)
-        clearTimeout(destinationDebounceRef.current);
+      if (destinationDebounceRef.current) clearTimeout(destinationDebounceRef.current);
     };
   }, []);
 
@@ -87,16 +81,13 @@ const RequestRideForm = ({ navigation }) => {
             location: { lat: ride.endLatitude, lng: ride.endLongitude },
           },
         });
-
         setRideDate(new Date(ride.rideDate));
         setRideTime(new Date(`${ride.rideDate}T${ride.rideTime}`));
-
         setPassengers(ride.numberOfPassengers);
         setFare(ride.offeredPrice.toString());
         setNotes(ride.notes || "");
-
         setSelectedRoute(ride.polyline || null);
-      } catch (error){
+      } catch (_error) {
         showModal("Failed to load ride details", "error");
       }
     };
@@ -126,7 +117,7 @@ const RequestRideForm = ({ navigation }) => {
           setSourceSuggestions(results);
           setShowSourceSuggestions(true);
           setSourceError(false);
-        } catch (error) {
+        } catch (_error) {
           setSourceSuggestions([]);
           setShowSourceSuggestions(false);
           setSourceError(true);
@@ -145,8 +136,7 @@ const RequestRideForm = ({ navigation }) => {
     setSelectedDestination(null);
     setDestError(false);
 
-    if (destinationDebounceRef.current)
-      clearTimeout(destinationDebounceRef.current);
+    if (destinationDebounceRef.current) clearTimeout(destinationDebounceRef.current);
 
     destinationDebounceRef.current = setTimeout(async () => {
       if (text.length > 1) {
@@ -156,7 +146,7 @@ const RequestRideForm = ({ navigation }) => {
           setDestSuggestions(results);
           setShowDestSuggestions(true);
           setDestError(false);
-        } catch (error) {
+        } catch (_error) {
           setDestSuggestions([]);
           setShowDestSuggestions(false);
           setDestError(true);
@@ -174,9 +164,7 @@ const RequestRideForm = ({ navigation }) => {
     const displayText =
       typeof location === "string"
         ? location
-        : location.description ||
-          location.structured_formatting?.main_text ||
-          "";
+        : location.description || location.structured_formatting?.main_text || "";
 
     setSource(displayText);
     setSelectedSource(location);
@@ -189,9 +177,7 @@ const RequestRideForm = ({ navigation }) => {
     const displayText =
       typeof location === "string"
         ? location
-        : location.description ||
-          location.structured_formatting?.main_text ||
-          "";
+        : location.description || location.structured_formatting?.main_text || "";
 
     setDestination(displayText);
     setSelectedDestination(location);
@@ -251,73 +237,54 @@ const RequestRideForm = ({ navigation }) => {
       return;
     }
 
-    if (!validateDateTime()) {
-      return;
-    }
+    if (!validateDateTime()) return;
 
     try {
       let fetchedRoutes = routes;
-      
+
       if (!isEditMode || !selectedRoute) {
         fetchedRoutes = await fetchRoutes();
       }
 
       if (!fetchedRoutes || !fetchedRoutes[0]) {
-        if (isEditMode && selectedRoute) {
-        } else {
+        if (!isEditMode || !selectedRoute) {
           showModal("Unable to fetch route information", "error");
           return;
         }
       }
 
       const firstLeg = fetchedRoutes?.[0]?.legs?.[0];
-
-      const distanceKm = firstLeg?.distance
-        ? (firstLeg.distance / 1000).toFixed(2)
-        : null;
-      const durationMinutes = firstLeg?.duration
-        ? Math.round(firstLeg.duration / 60)
-        : null;
+      const distanceKm = firstLeg?.distance ? (firstLeg.distance / 1000).toFixed(2) : null;
+      const durationMinutes = firstLeg?.duration ? Math.round(firstLeg.duration / 60) : null;
 
       const payload = {
         startLocation: selectedSource.description,
         startLatitude: selectedSource.geometry.location.lat,
         startLongitude: selectedSource.geometry.location.lng,
-
         endLocation: selectedDestination.description,
         endLatitude: selectedDestination.geometry.location.lat,
         endLongitude: selectedDestination.geometry.location.lng,
-
         rideDate: rideDate.toISOString().split("T")[0],
         rideTime: rideTime.toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
           hour12: false,
         }),
-
         offeredPrice: parseFloat(fare),
         numberOfPassengers: passengers,
         polyline: selectedRoute,
-
         distanceKm: distanceKm ? parseFloat(distanceKm) : null,
         duration: durationMinutes,
       };
 
-      if (notes) {
-        payload.notes = notes;
-      }
+      if (notes) payload.notes = notes;
 
-
-      let response;
       if (isEditMode && id) {
-        response = await requestRideService.updateRide(id, payload);
+        await requestRideService.updateRide(id, payload);
         showModal("Ride request updated successfully!", "success");
         router.push("/my-requested-ride");
       } else {
-        response = await requestRideService.saveRequestRide(
-          selector.userId,
-          payload
-        );
+        await requestRideService.saveRequestRide(selector.userId, payload);
         showModal("Ride request submitted successfully!", "success");
         router.push("/my-requested-ride");
       }
@@ -342,8 +309,6 @@ const RequestRideForm = ({ navigation }) => {
         }
       }, 2000);
     } catch (error) {
-      console.error("Submit error:", error);
-      console.error("Error details:", error.message);
       showModal(
         `Failed to ${isEditMode ? "update" : "submit"} request: ${
           error.message || "Please try again"
@@ -356,288 +321,242 @@ const RequestRideForm = ({ navigation }) => {
   const renderSuggestion = (item, type) => (
     <TouchableOpacity
       style={styles.dropdownItem}
-      onPress={() =>
-        type === "source" ? selectSource(item) : selectDestination(item)
-      }
-      accessibilityLabel={`Select ${
-        item.description || item.structured_formatting?.main_text || item
-      }`}
-      activeOpacity={0.7}
+      onPress={() => (type === "source" ? selectSource(item) : selectDestination(item))}
+      activeOpacity={0.85}
     >
-      <Text style={styles.suggestionMain} numberOfLines={2} ellipsizeMode="tail">
+      <Text style={styles.suggestionMain} numberOfLines={2}>
         {item.description || item.structured_formatting?.main_text || item}
       </Text>
-      {item.structured_formatting?.secondary_text && (
-        <Text style={styles.suggestionSecondary} numberOfLines={1} ellipsizeMode="tail">
+      {item.structured_formatting?.secondary_text ? (
+        <Text style={styles.suggestionSecondary} numberOfLines={1}>
           {item.structured_formatting.secondary_text}
         </Text>
-      )}
+      ) : null}
     </TouchableOpacity>
   );
 
+  const renderField = ({
+    label,
+    value,
+    onChange,
+    placeholder,
+    loading,
+    onClear,
+    iconName,
+    showSuggestions,
+    suggestions,
+    type,
+    errorText,
+  }) => (
+    <View style={[styles.fieldGroup, showSuggestions ? styles.fieldGroupExpanded : null]}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.inputShell}>
+        <View style={styles.routeMarkerColumn}>
+          <View
+            style={[
+              styles.routeDot,
+              type === "source" ? styles.routeDotStart : styles.routeDotEnd,
+            ]}
+          />
+        </View>
+        <FontAwesome name={iconName} size={16} color={theme.colors.textMuted} />
+        <TextInput
+          style={styles.input}
+          placeholder={placeholder}
+          placeholderTextColor={theme.colors.textMuted}
+          value={value}
+          onChangeText={onChange}
+        />
+        {loading ? (
+          <ActivityIndicator size="small" color={theme.colors.primary} />
+        ) : value?.length > 0 ? (
+          <TouchableOpacity onPress={onClear}>
+            <FontAwesome name="times-circle" size={18} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+      {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
+      {showSuggestions && suggestions?.length > 0 ? (
+        <ScrollView
+          style={styles.dropdown}
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="always"
+          showsVerticalScrollIndicator={false}
+        >
+          {suggestions.map((item, index) => (
+            <View key={item.place_id || index}>{renderSuggestion(item, type)}</View>
+          ))}
+        </ScrollView>
+      ) : null}
+    </View>
+  );
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.requestFormContainer}
-        contentContainerStyle={styles.requestFormContent}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled={true}
-      >
-        <Text style={styles.formTitle}>
-          {isEditMode ? "Edit Ride Request" : "Request a Ride"}
+    <SafeAreaView style={styles.screen}>
+      <View style={styles.header}>
+        <Text style={styles.eyebrow}>{isEditMode ? "Update your plan" : "Passenger request"}</Text>
+        <Text style={styles.title}>{isEditMode ? "Edit ride request" : "Request a ride"}</Text>
+        <Text style={styles.subtitle}>
+          Share your route, preferred time, and expected fare in a few simple steps.
         </Text>
+      </View>
 
-        <View style={[styles.formGroup, showSourceSuggestions && styles.formGroupExpanded]}>
-          <Text style={styles.label}>Source *</Text>
-          <View style={styles.inputWithCross}>
-            <TextInput
-              style={styles.formInput}
-              placeholder="Enter Source"
-              placeholderTextColor="#999"
-              value={source}
-              onChangeText={handleSourceChange}
-              accessibilityLabel="Enter source location"
-            />
-            {source?.length > 0 && (
-              <TouchableOpacity
-                onPress={() => {
-                  setSource("");
-                  setShowSourceSuggestions(false);
-                  setSelectedSource(null);
-                }}
-                style={styles.clearButton}
-                accessibilityLabel="Clear source"
-              >
-                <FontAwesome name="times-circle" size={20} color="#999" />
-              </TouchableOpacity>
-            )}
-            {sourceLoading && (
-              <ActivityIndicator
-                size="small"
-                color="#007bff"
-                style={styles.loader}
-              />
-            )}
-          </View>
-
-          {sourceError && (
-            <Text style={styles.errorText}>
-              Unable to fetch suggestions. Please try again.
-            </Text>
-          )}
-
-          {showSourceSuggestions && sourceSuggestions?.length > 0 && (
-            <ScrollView
-              style={styles.dropdown}
-              nestedScrollEnabled={true}
-              keyboardShouldPersistTaps="always"
-              showsVerticalScrollIndicator={true}
-            >
-              {sourceSuggestions.map((item, i) => (
-                <View key={item.place_id || i}>
-                  {renderSuggestion(item, "source")}
-                </View>
-              ))}
-            </ScrollView>
-          )}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+      >
+        <View style={styles.heroCard}>
+          <Text style={styles.heroTitle}>Trip details</Text>
+          <Text style={styles.heroText}>
+            Riders nearby can view your request and contact you if it matches their route.
+          </Text>
         </View>
 
-        <View style={[styles.formGroup, showDestSuggestions && styles.formGroupExpanded]}>
-          <Text style={styles.label}>Destination *</Text>
-          <View style={styles.inputWithCross}>
-            <TextInput
-              style={styles.formInput}
-              placeholder="Enter Destination"
-              placeholderTextColor="#999"
-              value={destination}
-              onChangeText={handleDestinationChange}
-              accessibilityLabel="Enter destination location"
-            />
-            {destination?.length > 0 && (
-              <TouchableOpacity
-                onPress={() => {
-                  setDestination("");
-                  setShowDestSuggestions(false);
-                  setSelectedDestination(null);
-                }}
-                style={styles.clearButton}
-                accessibilityLabel="Clear destination"
-              >
-                <FontAwesome name="times-circle" size={20} color="#999" />
-              </TouchableOpacity>
-            )}
-            {destLoading && (
-              <ActivityIndicator
-                size="small"
-                color="#007bff"
-                style={styles.loader}
-              />
-            )}
-          </View>
+        {renderField({
+          label: "Source *",
+          value: source,
+          onChange: handleSourceChange,
+          placeholder: "Enter pickup point",
+          loading: sourceLoading,
+          onClear: () => {
+            setSource("");
+            setShowSourceSuggestions(false);
+            setSelectedSource(null);
+          },
+          iconName: "circle-o",
+          showSuggestions: showSourceSuggestions,
+          suggestions: sourceSuggestions,
+          type: "source",
+          errorText: sourceError ? "Unable to fetch suggestions. Please try again." : "",
+        })}
 
-          {destError && (
-            <Text style={styles.errorText}>
-              Unable to fetch suggestions. Please try again.
-            </Text>
-          )}
+        {renderField({
+          label: "Destination *",
+          value: destination,
+          onChange: handleDestinationChange,
+          placeholder: "Enter destination",
+          loading: destLoading,
+          onClear: () => {
+            setDestination("");
+            setShowDestSuggestions(false);
+            setSelectedDestination(null);
+          },
+          iconName: "map-marker",
+          showSuggestions: showDestSuggestions,
+          suggestions: destSuggestions,
+          type: "destination",
+          errorText: destError ? "Unable to fetch suggestions. Please try again." : "",
+        })}
 
-          {showDestSuggestions && destSuggestions?.length > 0 && (
-            <ScrollView
-              style={styles.dropdown}
-              nestedScrollEnabled={true}
-              keyboardShouldPersistTaps="always"
-              showsVerticalScrollIndicator={true}
-            >
-              {destSuggestions.map((item, i) => (
-                <View key={item.place_id || i}>
-                  {renderSuggestion(item, "destination")}
-                </View>
-              ))}
-            </ScrollView>
-          )}
-        </View>
-
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Ride Date *</Text>
-          <TouchableOpacity
-            style={styles.dateField}
-            onPress={() => setShowDatePicker(true)}
-            accessibilityLabel={`Select ride date, currently ${rideDate.toDateString()}`}
-          >
-            <Text style={styles.dateText}>{rideDate.toDateString()}</Text>
-            <FontAwesome name="calendar" size={20} color="#0051a8" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Ride Time *</Text>
-          <TouchableOpacity
-            style={styles.dateField}
-            onPress={() => setShowTimePicker(true)}
-            accessibilityLabel={`Select ride time, currently ${rideTime.toLocaleTimeString(
-              [],
-              { hour: "2-digit", minute: "2-digit" }
-            )}`}
-          >
-            <Text style={styles.dateText}>
-              {rideTime.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </Text>
-            <FontAwesome name="clock-o" size={20} color="#0051a8" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Number of Passengers *</Text>
-          <View style={styles.slotContainer}>
-            <TouchableOpacity
-              onPress={() => setPassengers((p) => Math.max(1, p - 1))}
-              style={styles.iconBtn}
-              accessibilityLabel="Decrease passengers"
-            >
-              <FontAwesome name="minus" size={20} color="#fff" />
+        <View style={styles.card}>
+          <Text style={styles.sectionLabel}>Travel time</Text>
+          <View style={styles.chipsRow}>
+            <TouchableOpacity style={styles.pillField} onPress={() => setShowDatePicker(true)} activeOpacity={0.85}>
+              <FontAwesome name="calendar" size={16} color={theme.colors.primary} />
+              <Text style={styles.pillText}>{rideDate.toDateString()}</Text>
             </TouchableOpacity>
-            <Text
-              style={styles.slotText}
-              accessibilityLabel={`${passengers} passengers`}
-            >
-              {passengers}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setPassengers((p) => p + 1)}
-              style={styles.iconBtn}
-              accessibilityLabel="Increase passengers"
-            >
-              <FontAwesome name="plus" size={20} color="#fff" />
+            <TouchableOpacity style={styles.pillField} onPress={() => setShowTimePicker(true)} activeOpacity={0.85}>
+              <FontAwesome name="clock-o" size={16} color={theme.colors.primary} />
+              <Text style={styles.pillText}>
+                {rideTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Expected Fare (₹) *</Text>
-          <View style={styles.inputWithCross}>
+        <View style={styles.card}>
+          <Text style={styles.sectionLabel}>Passenger count</Text>
+          <View style={styles.stepperRow}>
+            <TouchableOpacity
+              style={styles.stepperButton}
+              onPress={() => setPassengers((value) => Math.max(1, value - 1))}
+              activeOpacity={0.85}
+            >
+              <FontAwesome name="minus" size={16} color={theme.colors.primary} />
+            </TouchableOpacity>
+            <View style={styles.stepperValue}>
+              <Text style={styles.stepperNumber}>{passengers}</Text>
+              <Text style={styles.stepperCaption}>passengers</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.stepperButton}
+              onPress={() => setPassengers((value) => value + 1)}
+              activeOpacity={0.85}
+            >
+              <FontAwesome name="plus" size={16} color={theme.colors.primary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionLabel}>Fare and notes</Text>
+          <View style={styles.inputShell}>
+            <Text style={styles.currency}>Rs</Text>
             <TextInput
-              style={styles.formInput}
-              placeholder="Enter fare amount"
+              style={styles.input}
+              placeholder="Expected fare"
               keyboardType="numeric"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.textMuted}
               value={fare}
               onChangeText={setFare}
-              accessibilityLabel="Enter expected fare"
             />
-            {fare.length > 0 && (
-              <TouchableOpacity
-                onPress={() => setFare("")}
-                style={styles.clearButton}
-                accessibilityLabel="Clear fare"
-              >
-                <FontAwesome name="times-circle" size={20} color="#999" />
+            {fare.length > 0 ? (
+              <TouchableOpacity onPress={() => setFare("")}>
+                <FontAwesome name="times-circle" size={18} color={theme.colors.textMuted} />
               </TouchableOpacity>
-            )}
+            ) : null}
           </View>
-        </View>
-
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Additional Notes (Optional)</Text>
           <TextInput
-            style={[styles.formInput, styles.textArea]}
+            style={styles.notesInput}
             placeholder="Any special requirements or preferences"
-            placeholderTextColor="#999"
+            placeholderTextColor={theme.colors.textMuted}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
             value={notes}
             onChangeText={setNotes}
-            accessibilityLabel="Enter additional notes"
           />
         </View>
 
-        <TouchableOpacity
-          style={styles.submitButton}
-          onPress={handleSubmitRequest}
-          accessibilityLabel={
-            isEditMode ? "Update ride request" : "Submit ride request"
-          }
-        >
-          <Text style={styles.submitButtonText}>
-            {isEditMode ? "Update Ride Request" : "Post Ride Request"}
-          </Text>
-        </TouchableOpacity>
-
-        {showDatePicker && (
-          <DateTimePicker
-            value={rideDate}
-            mode="date"
-            display="default"
-            minimumDate={new Date()}
-            onChange={(event, selected) => {
-              setShowDatePicker(false);
-              if (selected) setRideDate(selected);
-            }}
-          />
-        )}
-
-        {showTimePicker && (
-          <DateTimePicker
-            value={rideTime}
-            mode="time"
-            display="default"
-            onChange={(event, selected) => {
-              setShowTimePicker(false);
-              if (selected) setRideTime(selected);
-            }}
-          />
-        )}
+        <View style={styles.footerSpace} />
       </ScrollView>
 
-      <Modal
-        transparent={true}
-        visible={modalVisible}
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
-      >
+      <View style={styles.stickyFooter}>
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmitRequest} activeOpacity={0.85}>
+          <Text style={styles.submitButtonText}>
+            {isEditMode ? "Update ride request" : "Post ride request"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {showDatePicker ? (
+        <DateTimePicker
+          value={rideDate}
+          mode="date"
+          display="default"
+          minimumDate={new Date()}
+          onChange={(event, selected) => {
+            setShowDatePicker(false);
+            if (selected) setRideDate(selected);
+          }}
+        />
+      ) : null}
+
+      {showTimePicker ? (
+        <DateTimePicker
+          value={rideTime}
+          mode="time"
+          display="default"
+          onChange={(event, selected) => {
+            setShowTimePicker(false);
+            if (selected) setRideTime(selected);
+          }}
+        />
+      ) : null}
+
+      <Modal transparent visible={modalVisible} animationType="fade" onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View
             style={[
@@ -646,11 +565,9 @@ const RequestRideForm = ({ navigation }) => {
             ]}
           >
             <FontAwesome
-              name={
-                modalType === "error" ? "exclamation-circle" : "check-circle"
-              }
-              size={24}
-              color="#fff"
+              name={modalType === "error" ? "exclamation-circle" : "check-circle"}
+              size={22}
+              color={theme.colors.white}
             />
             <Text style={styles.modalText}>{modalMessage}</Text>
           </View>
@@ -661,169 +578,265 @@ const RequestRideForm = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8fafc" },
-  requestFormContainer: { flex: 1, backgroundColor: "#f8fafc" },
-  requestFormContent: { padding: 20, paddingBottom: 40 },
-  formTitle: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#003366",
-    textAlign: "center",
-    marginBottom: 20,
+  screen: { flex: 1, backgroundColor: theme.colors.background },
+  header: {
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.surface,
   },
-  formGroup: { 
-    marginBottom: 20, 
+  eyebrow: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.primary,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: theme.spacing.sm,
+  },
+  title: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.xxxl,
+    color: theme.colors.textPrimary,
+  },
+  subtitle: {
+    marginTop: theme.spacing.sm,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.md,
+    lineHeight: 22,
+    color: theme.colors.textSecondary,
+  },
+  scroll: { flex: 1 },
+  content: {
+    padding: theme.spacing.xl,
+    paddingBottom: theme.spacing.xxl,
+  },
+  heroCard: {
+    padding: theme.spacing.xl,
+    borderRadius: theme.borderRadius.xl,
+    backgroundColor: theme.colors.skyBlue,
+    marginBottom: theme.spacing.lg,
+  },
+  heroTitle: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+  heroText: {
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.sm,
+    lineHeight: 20,
+    color: theme.colors.textSecondary,
+  },
+  card: {
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.card,
+  },
+  fieldGroup: {
+    marginBottom: theme.spacing.lg,
     position: "relative",
   },
-  formGroupExpanded: {
+  fieldGroupExpanded: {
     marginBottom: 220,
   },
-  label: { fontSize: 15, fontWeight: "600", color: "#333", marginBottom: 8 },
-  inputWithCross: {
+  label: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.sm,
+  },
+  sectionLabel: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: theme.spacing.md,
+  },
+  inputShell: {
+    minHeight: 52,
     flexDirection: "row",
     alignItems: "center",
+    gap: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
     borderWidth: 1,
-    borderColor: "#ECEBF0",
-    borderRadius: 10,
-    backgroundColor: "#fff",
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.white,
+    ...theme.shadows.card,
   },
-  formInput: {
-    flex: 1,
-    height: 48,
-    paddingHorizontal: 12,
-    fontSize: 15,
-    color: "#000",
-  },
-  clearButton: { 
-    padding: 10, 
-    justifyContent: "center", 
+  routeMarkerColumn: {
     alignItems: "center",
+    justifyContent: "center",
   },
-  loader: { marginRight: 10 },
+  routeDot: {
+    width: 10,
+    height: 10,
+    borderRadius: theme.borderRadius.full,
+  },
+  routeDotStart: { backgroundColor: theme.colors.accent },
+  routeDotEnd: { backgroundColor: theme.colors.primary },
+  input: {
+    flex: 1,
+    minHeight: 48,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+  },
   errorText: {
-    color: "#ef4444",
-    fontSize: 12,
-    marginTop: 4,
-    marginLeft: 4,
+    marginTop: theme.spacing.sm,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.xs,
+    color: theme.colors.error,
   },
   dropdown: {
     position: "absolute",
-    top: 78,
+    top: 82,
     left: 0,
     right: 0,
-    backgroundColor: "#fff",
+    maxHeight: 210,
+    backgroundColor: theme.colors.white,
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 6,
-    elevation: 10,
-    zIndex: 10000,
-    maxHeight: 200,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.lg,
+    zIndex: 40,
+    ...theme.shadows.card,
   },
   dropdownItem: {
-    padding: 12,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: theme.colors.border,
   },
   suggestionMain: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
   },
   suggestionSecondary: {
-    fontSize: 12,
-    color: "#666",
     marginTop: 2,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
   },
-  dateField: {
+  chipsRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    gap: theme.spacing.md,
+    flexWrap: "wrap",
+  },
+  pillField: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: "#ECEBF0",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: "#fff",
+    borderColor: theme.colors.border,
   },
-  dateText: { fontSize: 15, color: "#000" },
-  slotContainer: {
+  pillText: {
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textPrimary,
+  },
+  stepperRow: {
     flexDirection: "row",
     alignItems: "center",
-    borderColor: "#ECEBF0",
-    borderRadius: 10,
-    padding: 8,
-    width: "100%",
     justifyContent: "space-between",
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.md,
   },
-  iconBtn: {
-    backgroundColor: "#2c73beff",
-    padding: 8,
-    borderRadius: 100,
-    height: 40,
-    width: 40,
+  stepperButton: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.borderRadius.full,
     alignItems: "center",
     justifyContent: "center",
-  },
-  slotText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#000",
-    marginHorizontal: 12,
-  },
-  textArea: { 
-    height: 100, 
-    paddingTop: 12, 
-    textAlignVertical: "top",
+    backgroundColor: theme.colors.white,
     borderWidth: 1,
-    borderColor: "#ECEBF0",
-    borderRadius: 10,
+    borderColor: theme.colors.border,
+  },
+  stepperValue: { alignItems: "center" },
+  stepperNumber: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.xxl,
+    color: theme.colors.textPrimary,
+  },
+  stepperCaption: {
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.textSecondary,
+  },
+  currency: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.primary,
+  },
+  notesInput: {
+    marginTop: theme.spacing.md,
+    minHeight: 112,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.white,
+    fontFamily: "work-sans-regular",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.textPrimary,
+  },
+  footerSpace: { height: 100 },
+  stickyFooter: {
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    backgroundColor: theme.colors.white,
   },
   submitButton: {
-    backgroundColor: "#0051a8",
-    borderRadius: 10,
-    paddingVertical: 14,
+    minHeight: 54,
+    borderRadius: theme.borderRadius.full,
     alignItems: "center",
-    marginTop: 15,
-    marginBottom: 25,
+    justifyContent: "center",
+    backgroundColor: theme.colors.primary,
+    ...theme.shadows.button,
   },
-  submitButtonText: { color: "#fff", fontSize: 17, fontWeight: "700" },
+  submitButtonText: {
+    fontFamily: "work-sans-bold",
+    fontSize: theme.fontSizes.lg,
+    color: theme.colors.white,
+  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
+    backgroundColor: "rgba(26, 26, 46, 0.26)",
     alignItems: "center",
-    paddingHorizontal: 20,
+    justifyContent: "center",
+    paddingHorizontal: theme.spacing.xl,
   },
   modalContent: {
-    backgroundColor: "#10b981",
-    padding: 20,
-    borderRadius: 12,
+    width: "100%",
+    borderRadius: theme.borderRadius.lg,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    minWidth: 280,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    gap: theme.spacing.md,
   },
-  modalSuccess: {
-    backgroundColor: "#10b981",
-  },
-  modalError: {
-    backgroundColor: "#ef4444",
-  },
+  modalSuccess: { backgroundColor: theme.colors.accent },
+  modalError: { backgroundColor: theme.colors.error },
   modalText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
     flex: 1,
+    fontFamily: "work-sans-medium",
+    fontSize: theme.fontSizes.md,
+    color: theme.colors.white,
   },
 });
 
